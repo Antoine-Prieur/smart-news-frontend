@@ -1,6 +1,6 @@
 import React from "react";
 import Menuitems from "./MenuItems";
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import {
   Logo,
   Sidebar as MUI_Sidebar,
@@ -11,15 +11,10 @@ import {
 import { IconPoint } from '@tabler/icons-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Upgrade } from "./Updrade";
-
 
 const renderMenuItems = (items: any, pathDirect: any) => {
-
   return items.map((item: any) => {
-
     const Icon = item.icon ? item.icon : IconPoint;
-
     const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
 
     if (item.subheader) {
@@ -47,7 +42,6 @@ const renderMenuItems = (items: any, pathDirect: any) => {
     }
 
     // If the item has no children, render a MenuItem
-
     return (
       <Box px={3} key={item.id}>
         <MenuItem
@@ -61,29 +55,35 @@ const renderMenuItems = (items: any, pathDirect: any) => {
           {item.title}
         </MenuItem >
       </Box>
-
     );
   });
 };
-
 
 const SidebarItems = () => {
   const pathname = usePathname();
   const pathDirect = pathname;
 
   return (
-    < >
-      <MUI_Sidebar width={"100%"} showProfile={false} themeColor={"#5D87FF"} themeSecondaryColor={'#49beff'} >
-
-        <Logo img='/images/logos/dark-logo.svg' component={Link} to="/" >Modernize</Logo>
-
+    <>
+      <MUI_Sidebar 
+        width={"100%"} 
+        showProfile={false} 
+        themeColor={"#5D87FF"} 
+        themeSecondaryColor={'#49beff'} 
+      >
+		<Logo 
+		  img='/images/logos/dark-logo.svg' 
+		  component="a" 
+		  href="https://antoineprieur.iusevimbtw.com/"
+		  target="_blank"
+		  rel="noopener noreferrer"
+		>
+			  Modernize
+        </Logo>
         {renderMenuItems(Menuitems, pathDirect)}
-        <Box px={2}>
-          <Upgrade />
-        </Box>
       </MUI_Sidebar>
-
     </>
   );
 };
+
 export default SidebarItems;
