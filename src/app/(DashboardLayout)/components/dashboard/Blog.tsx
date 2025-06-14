@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
+  Card,
   CardContent,
   Typography,
   Grid,
@@ -11,7 +12,7 @@ import {
   Alert
 } from "@mui/material";
 import { Stack } from "@mui/system";
-import BlankCard from "@/app/(DashboardLayout)/components/shared/BlankCard";
+import { Button } from '@mui/material';
 
 // Types based on your backend structure
 interface SourceDocument {
@@ -33,33 +34,42 @@ interface ArticleDocument {
   updated_at: string;
 }
 
-interface ArticlesResponse {
+// Updated interface to match your new backend structure
+interface PaginatedArticlesResponse {
   articles: ArticleDocument[];
-  count: number;
+  total_count: number;
+  current_page_count: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
 
 const Blog = () => {
   const [articles, setArticles] = useState<ArticleDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [skip, setSkip] = useState(0);
-  const [limit] = useState(12); // Show 12 articles per page
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const fetchArticles = async (skipCount: number = 0) => {
+  const fetchArticles = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
       
+      // Calculate skip value: (page - 1) * perPage
+      const skip = (page - 1) * perPage;
+      
       const response = await fetch(
-        `https://smart-news-backend-production.up.railway.app/articles?skip=${skipCount}&limit=${limit}`,
+        `https://smart-news-backend-production.up.railway.app/articles?skip=${skip}&limit=${perPage}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
-          mode: 'cors', // Explicitly set CORS mode
+          mode: 'cors',
         }
       );
       
@@ -67,9 +77,12 @@ const Blog = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data: ArticlesResponse = await response.json();
+      const data: PaginatedArticlesResponse = await response.json();
       setArticles(data.articles);
-      setTotalCount(data.count);
+      setTotalCount(data.total_count);
+      setTotalPages(data.total_pages);
+      // Use the page parameter instead of data.page to ensure consistency
+      setCurrentPage(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
       console.error('Error fetching articles:', err);
@@ -79,19 +92,26 @@ const Blog = () => {
   };
 
   useEffect(() => {
-    fetchArticles(skip);
-  }, [skip]);
+    fetchArticles(currentPage);
+  }, [currentPage, perPage]); // Added perPage to dependencies
 
-  const handleLoadMore = () => {
-    const newSkip = skip + limit;
-    if (newSkip < totalCount) {
-      setSkip(newSkip);
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
     }
   };
 
-  const handleLoadPrevious = () => {
-    const newSkip = Math.max(0, skip - limit);
-    setSkip(newSkip);
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Add this function to handle direct page navigation (optional)
+  const handlePageClick = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   if (loading) {
@@ -119,17 +139,17 @@ const Blog = () => {
       <Grid container spacing={3}>
         {articles.map((article, index) => (
           <Grid
-            key={article._id || index}
+            key={article._id || `article-${index}`}
             size={{
               xs: 12,
               md: 6,
               lg: 4
             }}>
-            <BlankCard sx={{ 
+            <Card sx={{ 
               height: '100%', 
               display: 'flex', 
               flexDirection: 'column',
-              minHeight: '500px' // Ensure consistent card heights
+              minHeight: '500px'
             }}>
               {/* Article Image */}
               {article.url_to_image ? (
@@ -144,15 +164,17 @@ const Blog = () => {
                       objectFit: 'cover'
                     }}
                     onError={(e) => {
-                      // Hide broken images
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
                     }}
                   />
                 </Box>
               ) : (
-                // Placeholder for articles without images to maintain consistent layout
-                <Box sx={{ height: '200px', backgroundColor: '#f5f5f5', borderRadius: '8px 8px 0 0' }} />
+				<Box sx={{ 
+					height: '200px', 
+					backgroundColor: (theme) => theme.palette.grey[100],
+					borderRadius: '8px 8px 0 0' 
+				  }} />
               )}
               
               {/* Article Content */}
@@ -162,7 +184,7 @@ const Blog = () => {
                 display: 'flex', 
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                minHeight: '250px' // Consistent content area height
+                minHeight: '250px'
               }}>
                 <Box>
                   {/* Title */}
@@ -173,10 +195,10 @@ const Blog = () => {
                       fontWeight: 600,
                       lineHeight: 1.3,
                       display: '-webkit-box',
-                      '-webkit-line-clamp': 3, // Allow up to 3 lines for title
-                      '-webkit-box-orient': 'vertical',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      minHeight: '4rem' // Reserve space for 3 lines
+                      minHeight: '4rem'
                     }}
                   >
                     {article.title || 'No title available'}
@@ -189,11 +211,11 @@ const Blog = () => {
                     sx={{
                       mb: 2,
                       display: '-webkit-box',
-                      '-webkit-line-clamp': 4, // Allow up to 4 lines for description
-                      '-webkit-box-orient': 'vertical',
+                      WebkitLineClamp: 4,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       lineHeight: 1.5,
-                      minHeight: '6rem' // Reserve space for 4 lines
+                      minHeight: '6rem'
                     }}
                   >
                     {article.description || 'No description available'}
@@ -234,46 +256,88 @@ const Blog = () => {
                   )}
                 </Stack>
               </CardContent>
-            </BlankCard>
+            </Card>
           </Grid>
         ))}
       </Grid>
 
-      {/* Pagination Controls */}
+      {/* Enhanced Pagination Controls */}
       <Box display="flex" justifyContent="center" alignItems="center" gap={2} mt={4}>
         <button
-          onClick={handleLoadPrevious}
-          disabled={skip === 0}
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1}
           style={{
             padding: '8px 16px',
-            backgroundColor: skip === 0 ? '#f5f5f5' : '#1976d2',
-            color: skip === 0 ? '#999' : 'white',
+            backgroundColor: currentPage === 1 ? '#f5f5f5' : '#1976d2',
+            color: currentPage === 1 ? '#999' : 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: skip === 0 ? 'not-allowed' : 'pointer'
+            cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
           }}
         >
           Previous
         </button>
         
-        <Typography variant="body2" color="text.secondary">
-          Showing {skip + 1} - {Math.min(skip + limit, totalCount)} of {totalCount}
-        </Typography>
-        
-        <button
-          onClick={handleLoadMore}
-          disabled={skip + limit >= totalCount}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: skip + limit >= totalCount ? '#f5f5f5' : '#1976d2',
-            color: skip + limit >= totalCount ? '#999' : 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: skip + limit >= totalCount ? 'not-allowed' : 'pointer'
-          }}
-        >
-          Next
-        </button>
+
+		{/* Optional: Add page numbers for easier navigation */}
+		{totalPages <= 10 && (
+		  <Box display="flex" gap={1}>
+			{Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+			  <Button
+				key={pageNum}
+				onClick={() => handlePageClick(pageNum)}
+				variant={pageNum === currentPage ? "contained" : "outlined"}
+				color="primary"
+				size="small"
+				sx={{
+				  minWidth: '32px',
+				  height: '32px',
+				  fontSize: '12px',
+				  ...(pageNum === currentPage && {
+					backgroundColor: (theme) => theme.palette.primary.main,
+					color: 'white',
+					'&:hover': {
+					  backgroundColor: (theme) => theme.palette.primary.dark,
+					}
+				  }),
+				  ...(pageNum !== currentPage && {
+					backgroundColor: (theme) => theme.palette.grey[100],
+					color: (theme) => theme.palette.text.primary,
+					borderColor: (theme) => theme.palette.grey[300],
+					'&:hover': {
+					  backgroundColor: (theme) => theme.palette.grey[200],
+					}
+				  })
+				}}
+			  >
+				{pageNum}
+			  </Button>
+			))}
+		  </Box>
+		)}
+
+		<Typography variant="body2" color="text.secondary">
+		  Page {currentPage} of {totalPages} ({totalCount} total articles)
+		</Typography>
+
+		<Button
+		  onClick={handleNextPage}
+		  disabled={currentPage >= totalPages}
+		  variant="contained"
+		  color="primary"
+		  sx={{
+			...(currentPage >= totalPages && {
+			  backgroundColor: (theme) => theme.palette.grey[300],
+			  color: (theme) => theme.palette.grey[500],
+			  cursor: 'not-allowed',
+			  '&:hover': {
+				backgroundColor: (theme) => theme.palette.grey[300],
+			  }
+			})
+		  }}
+		>
+  Next
+</Button>
       </Box>
     </Box>
   );

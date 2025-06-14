@@ -50,7 +50,7 @@ export default function RootLayout({
         {/* ------------------------------------------- */}
         {/* Header */}
         {/* ------------------------------------------- */}
-        <Header toggleMobileSidebar={() => setMobileSidebarOpen(true)} />
+        {/* <Header toggleMobileSidebar={() => setMobileSidebarOpen(true)} /> */}
         {/* ------------------------------------------- */}
         {/* PageContent */}
         {/* ------------------------------------------- */}

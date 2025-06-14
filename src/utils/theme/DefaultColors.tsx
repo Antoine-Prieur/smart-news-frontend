@@ -12,57 +12,61 @@ const baselightTheme = createTheme({
   direction: "ltr",
   palette: {
     primary: {
-      main: "#5D87FF",
-      light: "#ECF2FF",
-      dark: "#4570EA",
+      main: "#313e5b",      // Delft Blue - sophisticated dark blue
+      light: "#4a5e8a",     // From your Tailwind config
+      dark: "#1d2536",      // Darker shade
     },
     secondary: {
-      main: "#49BEFF",
-      light: "#E8F7FF",
-      dark: "#23afdb",
+      main: "#f9be9c",      // Peach - warm, inviting
+      light: "#facaae",     // Light peach
+      dark: "#e45c0d",      // Deeper peach/orange
     },
     success: {
-      main: "#13DEB9",
+      main: "#13DEB9",      // Keep existing - works well with your palette
       light: "#E6FFFA",
       dark: "#02b3a9",
       contrastText: "#ffffff",
     },
     info: {
-      main: "#539BFF",
-      light: "#EBF3FE",
-      dark: "#1682d4",
+      main: "#f9bb97",      // Second peach variant
+      light: "#fac7aa",     // Light version
+      dark: "#f4884a",      // Darker version
       contrastText: "#ffffff",
     },
     error: {
-      main: "#FA896B",
+      main: "#FA896B",      // Keep existing - complements your palette
       light: "#FDEDE8",
       dark: "#f3704d",
       contrastText: "#ffffff",
     },
     warning: {
-      main: "#FFAE1F",
-      light: "#FEF5E5",
-      dark: "#ae8e59",
+      main: "#f9be9c",      // Use your peach for warnings too
+      light: "#fde4d7",     // Very light peach
+      dark: "#e45c0d",      // Darker peach
       contrastText: "#ffffff",
     },
     grey: {
-      100: "#F2F6FA",
-      200: "#EAEFF4",
-      300: "#DFE5EF",
-      400: "#7C8FAC",
-      500: "#5A6A85",
-      600: "#2A3547",
+      100: "#f6f1ee",       // From desert sand light
+      200: "#eee3dd",       // Misty rose variations
+      300: "#e5d5cd",       // Desert sand tones
+      400: "#d4bbac",       // Desert sand main
+      500: "#97694e",       // Desert sand dark
+      600: "#313e5b",       // Your delft blue
     },
     text: {
-      primary: "#2A3547",
-      secondary: "#5A6A85",
+      primary: "#313e5b",   // Delft blue for primary text
+      secondary: "#97694e", // Desert sand dark for secondary text
     },
     action: {
-      disabledBackground: "rgba(73,82,88,0.12)",
+      disabledBackground: "rgba(212,187,172,0.12)", // Desert sand with opacity
       hoverOpacity: 0.02,
-      hover: "#f6f9fc",
+      hover: "#f6f1ee",     // Very light desert sand
     },
-    divider: "#e5eaef",
+    divider: "#e5d5cd",     // Light desert sand
+    background: {
+      default: "#fcf8f7",   // Very light misty rose
+      paper: "#ffffff",
+    },
   },
   typography: {
     fontFamily: plus.style.fontFamily,
@@ -130,7 +134,6 @@ const baselightTheme = createTheme({
           boxShadow:
             "rgb(145 158 171 / 30%) 0px 0px 2px 0px, rgb(145 158 171 / 12%) 0px 12px 24px -4px !important",
         },
-
       },
     },
     MuiCard: {
@@ -140,8 +143,6 @@ const baselightTheme = createTheme({
         },
       },
     },
-
-
   },
 });
 

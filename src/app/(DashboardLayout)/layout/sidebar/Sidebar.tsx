@@ -1,4 +1,5 @@
 import { useMediaQuery, Box, Drawer } from "@mui/material";
+import { useTheme } from '@mui/material/styles';
 import SidebarItems from "./SidebarItems";
 
 
@@ -15,6 +16,7 @@ const MSidebar = ({
   isSidebarOpen,
 }: ItemType) => {
   const lgUp = useMediaQuery((theme: any) => theme.breakpoints.up("lg"));
+  const theme = useTheme();
 
   const sidebarWidth = "270px";
 
@@ -22,11 +24,16 @@ const MSidebar = ({
   const scrollbarStyles = {
     '&::-webkit-scrollbar': {
       width: '7px',
-
     },
     '&::-webkit-scrollbar-thumb': {
-      backgroundColor: '#eff2f7',
+      backgroundColor: theme.palette.grey[200], // ← Uses theme color instead of hardcoded
       borderRadius: '15px',
+      '&:hover': {
+        backgroundColor: theme.palette.grey[300], // ← Hover effect with theme color
+      }
+    },
+    '&::-webkit-scrollbar-track': {
+      backgroundColor: theme.palette.grey[100], // ← Track color with theme
     },
   };
 

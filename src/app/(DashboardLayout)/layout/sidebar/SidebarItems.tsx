@@ -1,6 +1,6 @@
 import React from "react";
 import Menuitems from "./MenuItems";
-import { Box } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 import {
   Logo,
   Sidebar as MUI_Sidebar,
@@ -11,10 +11,15 @@ import {
 import { IconPoint } from '@tabler/icons-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Upgrade } from "./Updrade";
+
 
 const renderMenuItems = (items: any, pathDirect: any) => {
+
   return items.map((item: any) => {
+
     const Icon = item.icon ? item.icon : IconPoint;
+
     const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
 
     if (item.subheader) {
@@ -42,6 +47,7 @@ const renderMenuItems = (items: any, pathDirect: any) => {
     }
 
     // If the item has no children, render a MenuItem
+
     return (
       <Box px={3} key={item.id}>
         <MenuItem
@@ -55,35 +61,34 @@ const renderMenuItems = (items: any, pathDirect: any) => {
           {item.title}
         </MenuItem >
       </Box>
+
     );
   });
 };
 
+
 const SidebarItems = () => {
   const pathname = usePathname();
   const pathDirect = pathname;
+  
+  // Get theme colors
+  const theme = useTheme();
 
   return (
-    <>
+    < >
       <MUI_Sidebar 
         width={"100%"} 
         showProfile={false} 
-        themeColor={"#5D87FF"} 
-        themeSecondaryColor={'#49beff'} 
+        themeColor={theme.palette.primary.main}           // ← Your new Delft Blue
+        themeSecondaryColor={theme.palette.secondary.main} // ← Your new Peach
       >
-		<Logo 
-		  img='/images/logos/dark-logo.svg' 
-		  component="a" 
-		  href="https://antoineprieur.iusevimbtw.com/"
-		  target="_blank"
-		  rel="noopener noreferrer"
-		>
-			  Modernize
-        </Logo>
+
+        {/* <Logo img='/images/logos/dark-logo.svg' component={Link} to="/" >Modernize</Logo> */}
+
         {renderMenuItems(Menuitems, pathDirect)}
       </MUI_Sidebar>
+
     </>
   );
 };
-
 export default SidebarItems;
