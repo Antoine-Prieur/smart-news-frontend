@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -9,10 +9,11 @@ import {
   Avatar,
   Box,
   CircularProgress,
-  Alert
+  Alert,
 } from "@mui/material";
 import { Stack } from "@mui/system";
-import { Button } from '@mui/material';
+import { Button } from "@mui/material";
+import NewsFilters from "./NewsFilter";
 
 // Types based on your backend structure
 interface SourceDocument {
@@ -52,31 +53,35 @@ const Blog = () => {
   const [perPage] = useState(12);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([
+    "All News",
+  ]);
+  const [selectedSortBy, setSelectedSortBy] = useState<string>("latest");
 
   const fetchArticles = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Calculate skip value: (page - 1) * perPage
       const skip = (page - 1) * perPage;
-      
+
       const response = await fetch(
         `https://smart-news-backend-production.up.railway.app/articles?skip=${skip}&limit=${perPage}`,
         {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          mode: 'cors',
-        }
+          mode: "cors",
+        },
       );
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data: PaginatedArticlesResponse = await response.json();
       setArticles(data.articles);
       setTotalCount(data.total_count);
@@ -84,8 +89,8 @@ const Blog = () => {
       // Use the page parameter instead of data.page to ensure consistency
       setCurrentPage(page);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch articles');
-      console.error('Error fetching articles:', err);
+      setError(err instanceof Error ? err.message : "Failed to fetch articles");
+      console.error("Error fetching articles:", err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +121,12 @@ const Blog = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -132,10 +142,13 @@ const Blog = () => {
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        Latest News
-      </Typography>
-      
+      <NewsFilters
+        selectedCategories={selectedCategories}
+        onCategoryChange={setSelectedCategories}
+        selectedSortBy={selectedSortBy}
+        onSortChange={setSelectedSortBy}
+      />
+
       <Grid container spacing={3}>
         {articles.map((article, index) => (
           <Grid
@@ -143,85 +156,98 @@ const Blog = () => {
             size={{
               xs: 12,
               md: 6,
-              lg: 4
-            }}>
-            <Card sx={{ 
-              height: '100%', 
-              display: 'flex', 
-              flexDirection: 'column',
-              minHeight: '500px'
-            }}>
+              lg: 4,
+            }}
+          >
+            <Card
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                minHeight: "500px",
+              }}
+            >
               {/* Article Image */}
               {article.url_to_image ? (
-                <Box sx={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
+                <Box
+                  sx={{
+                    position: "relative",
+                    height: "200px",
+                    overflow: "hidden",
+                  }}
+                >
                   <Avatar
                     src={article.url_to_image}
                     variant="square"
                     sx={{
-                      height: '100%',
-                      width: '100%',
-                      borderRadius: '8px 8px 0 0',
-                      objectFit: 'cover'
+                      height: "100%",
+                      width: "100%",
+                      borderRadius: "8px 8px 0 0",
+                      objectFit: "cover",
                     }}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
+                      target.style.display = "none";
                     }}
                   />
                 </Box>
               ) : (
-				<Box sx={{ 
-					height: '200px', 
-					backgroundColor: (theme) => theme.palette.grey[100],
-					borderRadius: '8px 8px 0 0' 
-				  }} />
+                <Box
+                  sx={{
+                    height: "200px",
+                    backgroundColor: (theme) => theme.palette.grey[100],
+                    borderRadius: "8px 8px 0 0",
+                  }}
+                />
               )}
-              
+
               {/* Article Content */}
-              <CardContent sx={{ 
-                p: 3, 
-                flexGrow: 1, 
-                display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                minHeight: '250px'
-              }}>
+              <CardContent
+                sx={{
+                  p: 3,
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  minHeight: "250px",
+                }}
+              >
                 <Box>
                   {/* Title */}
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
+                  <Typography
+                    variant="h6"
+                    sx={{
                       mb: 1,
                       fontWeight: 600,
                       lineHeight: 1.3,
-                      display: '-webkit-box',
+                      display: "-webkit-box",
                       WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      minHeight: '4rem'
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                      minHeight: "4rem",
                     }}
                   >
-                    {article.title || 'No title available'}
+                    {article.title || "No title available"}
                   </Typography>
-                  
+
                   {/* Description */}
-                  <Typography 
-                    variant="body2" 
+                  <Typography
+                    variant="body2"
                     color="text.secondary"
                     sx={{
                       mb: 2,
-                      display: '-webkit-box',
+                      display: "-webkit-box",
                       WebkitLineClamp: 4,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
                       lineHeight: 1.5,
-                      minHeight: '6rem'
+                      minHeight: "6rem",
                     }}
                   >
-                    {article.description || 'No description available'}
+                    {article.description || "No description available"}
                   </Typography>
                 </Box>
-                
+
                 {/* Article Meta */}
                 <Stack direction="column" spacing={1}>
                   {article.source?.name && (
@@ -229,26 +255,26 @@ const Blog = () => {
                       {article.source.name}
                     </Typography>
                   )}
-                  
+
                   {article.published_at && (
                     <Typography variant="caption" color="text.secondary">
                       {new Date(article.published_at).toLocaleDateString()}
                     </Typography>
                   )}
-                  
+
                   {article.url && (
-                    <Typography 
-                      component={Link} 
+                    <Typography
+                      component={Link}
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       variant="body2"
                       color="primary"
-                      sx={{ 
-                        textDecoration: 'none',
-                        '&:hover': {
-                          textDecoration: 'underline'
-                        }
+                      sx={{
+                        textDecoration: "none",
+                        "&:hover": {
+                          textDecoration: "underline",
+                        },
                       }}
                     >
                       Read full article →
@@ -262,82 +288,89 @@ const Blog = () => {
       </Grid>
 
       {/* Enhanced Pagination Controls */}
-      <Box display="flex" justifyContent="center" alignItems="center" gap={2} mt={4}>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        gap={2}
+        mt={4}
+      >
         <button
           onClick={handlePreviousPage}
           disabled={currentPage === 1}
           style={{
-            padding: '8px 16px',
-            backgroundColor: currentPage === 1 ? '#f5f5f5' : '#1976d2',
-            color: currentPage === 1 ? '#999' : 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+            padding: "8px 16px",
+            backgroundColor: currentPage === 1 ? "#f5f5f5" : "#1976d2",
+            color: currentPage === 1 ? "#999" : "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: currentPage === 1 ? "not-allowed" : "pointer",
           }}
         >
           Previous
         </button>
-        
 
-		{/* Optional: Add page numbers for easier navigation */}
-		{totalPages <= 10 && (
-		  <Box display="flex" gap={1}>
-			{Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-			  <Button
-				key={pageNum}
-				onClick={() => handlePageClick(pageNum)}
-				variant={pageNum === currentPage ? "contained" : "outlined"}
-				color="primary"
-				size="small"
-				sx={{
-				  minWidth: '32px',
-				  height: '32px',
-				  fontSize: '12px',
-				  ...(pageNum === currentPage && {
-					backgroundColor: (theme) => theme.palette.primary.main,
-					color: 'white',
-					'&:hover': {
-					  backgroundColor: (theme) => theme.palette.primary.dark,
-					}
-				  }),
-				  ...(pageNum !== currentPage && {
-					backgroundColor: (theme) => theme.palette.grey[100],
-					color: (theme) => theme.palette.text.primary,
-					borderColor: (theme) => theme.palette.grey[300],
-					'&:hover': {
-					  backgroundColor: (theme) => theme.palette.grey[200],
-					}
-				  })
-				}}
-			  >
-				{pageNum}
-			  </Button>
-			))}
-		  </Box>
-		)}
+        {/* Optional: Add page numbers for easier navigation */}
+        {totalPages <= 10 && (
+          <Box display="flex" gap={1}>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+              (pageNum) => (
+                <Button
+                  key={pageNum}
+                  onClick={() => handlePageClick(pageNum)}
+                  variant={pageNum === currentPage ? "contained" : "outlined"}
+                  color="primary"
+                  size="small"
+                  sx={{
+                    minWidth: "32px",
+                    height: "32px",
+                    fontSize: "12px",
+                    ...(pageNum === currentPage && {
+                      backgroundColor: (theme) => theme.palette.primary.main,
+                      color: "white",
+                      "&:hover": {
+                        backgroundColor: (theme) => theme.palette.primary.dark,
+                      },
+                    }),
+                    ...(pageNum !== currentPage && {
+                      backgroundColor: (theme) => theme.palette.grey[100],
+                      color: (theme) => theme.palette.text.primary,
+                      borderColor: (theme) => theme.palette.grey[300],
+                      "&:hover": {
+                        backgroundColor: (theme) => theme.palette.grey[200],
+                      },
+                    }),
+                  }}
+                >
+                  {pageNum}
+                </Button>
+              ),
+            )}
+          </Box>
+        )}
 
-		<Typography variant="body2" color="text.secondary">
-		  Page {currentPage} of {totalPages} ({totalCount} total articles)
-		</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Page {currentPage} of {totalPages} ({totalCount} total articles)
+        </Typography>
 
-		<Button
-		  onClick={handleNextPage}
-		  disabled={currentPage >= totalPages}
-		  variant="contained"
-		  color="primary"
-		  sx={{
-			...(currentPage >= totalPages && {
-			  backgroundColor: (theme) => theme.palette.grey[300],
-			  color: (theme) => theme.palette.grey[500],
-			  cursor: 'not-allowed',
-			  '&:hover': {
-				backgroundColor: (theme) => theme.palette.grey[300],
-			  }
-			})
-		  }}
-		>
-  Next
-</Button>
+        <Button
+          onClick={handleNextPage}
+          disabled={currentPage >= totalPages}
+          variant="contained"
+          color="primary"
+          sx={{
+            ...(currentPage >= totalPages && {
+              backgroundColor: (theme) => theme.palette.grey[300],
+              color: (theme) => theme.palette.grey[500],
+              cursor: "not-allowed",
+              "&:hover": {
+                backgroundColor: (theme) => theme.palette.grey[300],
+              },
+            }),
+          }}
+        >
+          Next
+        </Button>
       </Box>
     </Box>
   );

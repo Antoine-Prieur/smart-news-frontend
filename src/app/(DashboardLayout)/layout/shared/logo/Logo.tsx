@@ -3,19 +3,29 @@ import { styled } from "@mui/material";
 import Image from "next/image";
 
 const LinkStyled = styled(Link)(() => ({
-  height: "70px",
-  width: "180px",
-  overflow: "hidden",
+  height: "40px",
+  width: "auto",
+  position: "relative",
   display: "block",
+  marginTop: "16px",
+  marginBottom: "32px",
 }));
 
 const Logo = () => {
   return (
     <LinkStyled href="/">
-      <Image src="/images/logos/dark-logo.svg" alt="logo" height={70} width={174} priority />
+      <Image
+        src="/images/logos/smart-news-logo.png"
+        alt="logo"
+        fill
+        style={{
+          objectFit: "contain", // Keeps ratio, fits within container
+        }}
+        priority
+      />
     </LinkStyled>
   );
 };
 
 export default Logo;
-  
+
