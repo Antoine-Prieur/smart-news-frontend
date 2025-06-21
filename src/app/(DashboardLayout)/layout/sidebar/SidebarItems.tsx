@@ -1,6 +1,6 @@
 import React from "react";
 import Menuitems from "./MenuItems";
-import { Box, useTheme } from "@mui/material";
+import { Box, useTheme, styled } from "@mui/material";
 import {
   Sidebar as MUI_Sidebar,
   Menu,
@@ -39,7 +39,6 @@ const renderMenuItems = (items: any, pathDirect: any) => {
     }
 
     // If the item has no children, render a MenuItem
-
     return (
       <Box px={3} key={item.id}>
         <MenuItem
@@ -57,6 +56,36 @@ const renderMenuItems = (items: any, pathDirect: any) => {
   });
 };
 
+// Styled wrapper for the sidebar to apply custom background
+const SidebarWrapper = styled(Box)(({ theme }) => ({
+  height: "100%",
+  // Apply your beautiful pastel background
+  backgroundColor: theme.palette.background.default, // #fcf8f7
+  // Add some subtle styling
+  borderRight: `1px solid ${theme.palette.divider}`, // #e5d5cd
+
+  // Override the react-mui-sidebar default styles
+  "& .MuiBox-root": {
+    backgroundColor: "transparent !important",
+  },
+
+  // Style the sidebar content
+  "& .sidebar-content": {
+    backgroundColor: "transparent",
+  },
+
+  // Ensure menu items have proper hover effects with your theme
+  "& .menu-item:hover": {
+    backgroundColor: theme.palette.action.hover, // #f6f1ee
+  },
+
+  // Style selected menu items
+  "& .menu-item.selected": {
+    backgroundColor: `${theme.palette.primary.light}15`, // Light blue with opacity
+    borderLeft: `3px solid ${theme.palette.primary.main}`,
+  },
+}));
+
 const SidebarItems = () => {
   const pathname = usePathname();
   const pathDirect = pathname;
@@ -65,18 +94,24 @@ const SidebarItems = () => {
   const theme = useTheme();
 
   return (
-    <>
+    <SidebarWrapper>
       <MUI_Sidebar
         width={"100%"}
         showProfile={false}
-        themeColor={theme.palette.primary.main} // ← Your new Delft Blue
-        themeSecondaryColor={theme.palette.secondary.main} // ← Your new Peach
+        themeColor={theme.palette.primary.main} // ← Your Delft Blue
+        themeSecondaryColor={theme.palette.secondary.main} // ← Your Peach
+        // Additional props to try to control background
+        backgroundColor={theme.palette.background.default}
+        style={{
+          backgroundColor: theme.palette.background.default,
+        }}
       >
         <Logo />
 
         {renderMenuItems(Menuitems, pathDirect)}
       </MUI_Sidebar>
-    </>
+    </SidebarWrapper>
   );
 };
+
 export default SidebarItems;

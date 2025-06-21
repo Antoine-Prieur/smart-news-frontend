@@ -7,6 +7,8 @@ const LinkStyled = styled(Link)(() => ({
   width: "auto",
   position: "relative",
   display: "block",
+  marginLeft: "4px",
+  marginRight: "4px",
   marginTop: "16px",
   marginBottom: "32px",
 }));

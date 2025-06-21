@@ -77,9 +77,9 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
       sx={{
         p: 2,
         mb: 3,
-        backgroundColor: "background.paper",
+        backgroundColor: "background.default", // Your theme's pastel background
         border: "1px solid",
-        borderColor: "divider",
+        borderColor: "divider", // Light desert sand from your theme
         borderRadius: 2,
       }}
     >
@@ -140,7 +140,7 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
                     "&:hover": {
                       backgroundColor: selectedCategories.includes(category)
                         ? "primary.dark"
-                        : "action.hover",
+                        : "action.hover", // Uses your theme's action hover color
                     },
                     ...(selectedCategories.includes(category) && {
                       backgroundColor: "primary.main",
@@ -184,7 +184,7 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
                       backgroundColor:
                         selectedSortBy === option.value
                           ? "secondary.dark"
-                          : "action.hover",
+                          : "action.hover", // Uses your theme's action hover color
                     },
                     ...(selectedSortBy === option.value && {
                       backgroundColor: "secondary.main",
