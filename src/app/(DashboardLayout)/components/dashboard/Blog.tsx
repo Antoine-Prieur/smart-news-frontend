@@ -10,15 +10,23 @@ import {
   Box,
   CircularProgress,
   Alert,
+  Chip,
 } from "@mui/material";
 import { Stack } from "@mui/system";
 import { Button } from "@mui/material";
 import NewsFilters from "./NewsFilter";
 
+import { buildApiUrl, ENDPOINTS } from "@/config/api";
+
 // Types based on your backend structure
 interface SourceDocument {
   id?: string;
   name?: string;
+}
+
+interface SentimentAnalysisResponse {
+  confidence?: number;
+  sentiment: string;
 }
 
 interface ArticleDocument {
@@ -29,10 +37,11 @@ interface ArticleDocument {
   description?: string;
   url?: string;
   url_to_image?: string;
-  published_at?: string;
+  published_at?: string | { $date: { $numberLong: string } };
   content?: string;
   created_at: string;
   updated_at: string;
+  sentiment_analysis?: SentimentAnalysisResponse;
 }
 
 // Updated interface to match your new backend structure
@@ -58,6 +67,51 @@ const Blog = () => {
   ]);
   const [selectedSortBy, setSelectedSortBy] = useState<string>("latest");
 
+  const parseDate = (
+    dateField: string | { $date: { $numberLong: string } } | undefined,
+  ) => {
+    if (!dateField) return null;
+
+    if (typeof dateField === "string") {
+      return new Date(dateField);
+    }
+
+    if (typeof dateField === "object" && dateField.$date) {
+      const timestamp = parseInt(dateField.$date.$numberLong, 10);
+      return new Date(timestamp);
+    }
+
+    return null;
+  };
+
+  // Helper function to get sentiment color and icon
+  const getSentimentDisplayProps = (sentiment: string, confidence?: number) => {
+    const normalizedSentiment = sentiment.toLowerCase();
+
+    switch (normalizedSentiment) {
+      case "positive":
+        return {
+          color: "success" as const,
+          label: `😊 Positive${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+        };
+      case "negative":
+        return {
+          color: "error" as const,
+          label: `😞 Negative${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+        };
+      case "neutral":
+        return {
+          color: "default" as const,
+          label: `😐 Neutral${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+        };
+      default:
+        return {
+          color: "default" as const,
+          label: "Unknown",
+        };
+    }
+  };
+
   const fetchArticles = async (page: number = 1) => {
     try {
       setLoading(true);
@@ -67,7 +121,10 @@ const Blog = () => {
       const skip = (page - 1) * perPage;
 
       const response = await fetch(
-        `https://smart-news-backend-production.up.railway.app/articles?skip=${skip}&limit=${perPage}`,
+        buildApiUrl(ENDPOINTS.ARTICLES, {
+          skip: skip.toString(),
+          limit: perPage.toString(),
+        }),
         {
           method: "GET",
           headers: {
@@ -150,141 +207,164 @@ const Blog = () => {
       />
 
       <Grid container spacing={3}>
-        {articles.map((article, index) => (
-          <Grid
-            key={article._id || `article-${index}`}
-            size={{
-              xs: 12,
-              md: 6,
-              lg: 4,
-            }}
-          >
-            <Card
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "500px",
+        {articles.map((article, index) => {
+          // const sentimentProps = article.sentiment_analysis
+          //   ? getSentimentDisplayProps(
+          //       article.sentiment_analysis.sentiment,
+          //       article.sentiment_analysis.confidence,
+          //     )
+          //   : null;
+
+          return (
+            <Grid
+              key={article._id || `article-${index}`}
+              size={{
+                xs: 12,
+                md: 6,
+                lg: 4,
               }}
             >
-              {/* Article Image */}
-              {article.url_to_image ? (
-                <Box
-                  sx={{
-                    position: "relative",
-                    height: "200px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <Avatar
-                    src={article.url_to_image}
-                    variant="square"
-                    sx={{
-                      height: "100%",
-                      width: "100%",
-                      borderRadius: "8px 8px 0 0",
-                      objectFit: "cover",
-                    }}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                    }}
-                  />
-                </Box>
-              ) : (
-                <Box
-                  sx={{
-                    height: "200px",
-                    backgroundColor: (theme) => theme.palette.grey[100],
-                    borderRadius: "8px 8px 0 0",
-                  }}
-                />
-              )}
-
-              {/* Article Content */}
-              <CardContent
+              <Card
                 sx={{
-                  p: 3,
-                  flexGrow: 1,
+                  height: "100%",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
-                  minHeight: "250px",
+                  minHeight: "500px",
                 }}
               >
-                <Box>
-                  {/* Title */}
-                  <Typography
-                    variant="h6"
+                {/* Article Image */}
+                {article.url_to_image ? (
+                  <Box
                     sx={{
-                      mb: 1,
-                      fontWeight: 600,
-                      lineHeight: 1.3,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: "vertical",
+                      height: "200px",
                       overflow: "hidden",
-                      minHeight: "4rem",
                     }}
                   >
-                    {article.title || "No title available"}
-                  </Typography>
-
-                  {/* Description */}
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      mb: 2,
-                      display: "-webkit-box",
-                      WebkitLineClamp: 4,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      lineHeight: 1.5,
-                      minHeight: "6rem",
-                    }}
-                  >
-                    {article.description || "No description available"}
-                  </Typography>
-                </Box>
-
-                {/* Article Meta */}
-                <Stack direction="column" spacing={1}>
-                  {article.source?.name && (
-                    <Typography variant="caption" color="primary">
-                      {article.source.name}
-                    </Typography>
-                  )}
-
-                  {article.published_at && (
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(article.published_at).toLocaleDateString()}
-                    </Typography>
-                  )}
-
-                  {article.url && (
-                    <Typography
-                      component={Link}
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="body2"
-                      color="primary"
+                    <Avatar
+                      src={article.url_to_image}
+                      variant="square"
                       sx={{
-                        textDecoration: "none",
-                        "&:hover": {
-                          textDecoration: "underline",
-                        },
+                        height: "100%",
+                        width: "100%",
+                        borderRadius: "8px 8px 0 0",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      height: "200px",
+                      backgroundColor: (theme) => theme.palette.grey[100],
+                      borderRadius: "8px 8px 0 0",
+                    }}
+                  />
+                )}
+
+                {/* Article Content */}
+                <CardContent
+                  sx={{
+                    p: 3,
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    minHeight: "250px",
+                  }}
+                >
+                  <Box>
+                    {/* Sentiment Badge - moved to top of card content */}
+                    {/* {sentimentProps && (
+                      <Box sx={{ mb: 2 }}>
+                        <Chip
+                          label={sentimentProps.label}
+                          color={sentimentProps.color}
+                          size="small"
+                          sx={{
+                            fontWeight: 600,
+                          }}
+                        />
+                      </Box>
+                    )} */}
+
+                    {/* Title */}
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 1,
+                        fontWeight: 600,
+                        lineHeight: 1.3,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        minHeight: "4rem",
                       }}
                     >
-                      Read full article →
+                      {article.title || "No title available"}
                     </Typography>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+
+                    {/* Description */}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        mb: 2,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 4,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        lineHeight: 1.5,
+                        minHeight: "6rem",
+                      }}
+                    >
+                      {article.description || "No description available"}
+                    </Typography>
+                  </Box>
+                  {/* Article Meta */}
+                  <Stack direction="column" spacing={1}>
+                    {article.source?.name && (
+                      <Typography variant="caption" color="primary">
+                        {article.source.name}
+                      </Typography>
+                    )}
+
+                    {article.published_at && (
+                      <Typography variant="caption" color="text.secondary">
+                        {parseDate(
+                          article.published_at,
+                        )?.toLocaleDateString() || "Date unavailable"}
+                      </Typography>
+                    )}
+
+                    {article.url && (
+                      <Typography
+                        component={Link}
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        variant="body2"
+                        color="primary"
+                        sx={{
+                          textDecoration: "none",
+                          "&:hover": {
+                            textDecoration: "underline",
+                          },
+                        }}
+                      >
+                        Read full article →
+                      </Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
       {/* Enhanced Pagination Controls */}
