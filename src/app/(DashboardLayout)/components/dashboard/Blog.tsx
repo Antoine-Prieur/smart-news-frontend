@@ -208,12 +208,12 @@ const Blog = () => {
 
       <Grid container spacing={3}>
         {articles.map((article, index) => {
-          // const sentimentProps = article.sentiment_analysis
-          //   ? getSentimentDisplayProps(
-          //       article.sentiment_analysis.sentiment,
-          //       article.sentiment_analysis.confidence,
-          //     )
-          //   : null;
+          const sentimentProps = article.sentiment_analysis
+            ? getSentimentDisplayProps(
+                article.sentiment_analysis.sentiment,
+                article.sentiment_analysis.confidence,
+              )
+            : null;
 
           return (
             <Grid
@@ -278,7 +278,7 @@ const Blog = () => {
                 >
                   <Box>
                     {/* Sentiment Badge - moved to top of card content */}
-                    {/* {sentimentProps && (
+                    {sentimentProps && (
                       <Box sx={{ mb: 2 }}>
                         <Chip
                           label={sentimentProps.label}
@@ -289,7 +289,7 @@ const Blog = () => {
                           }}
                         />
                       </Box>
-                    )} */}
+                    )}
 
                     {/* Title */}
                     <Typography
