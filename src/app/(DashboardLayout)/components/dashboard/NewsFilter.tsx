@@ -12,6 +12,9 @@ import {
   IconFilter,
   IconChevronDown,
   IconChevronUp,
+  IconMoodSmile,
+  IconMoodNeutral,
+  IconMoodSad,
 } from "@tabler/icons-react";
 
 interface NewsFiltersProps {
@@ -19,56 +22,45 @@ interface NewsFiltersProps {
   onCategoryChange: (categories: string[]) => void;
   selectedSortBy: string;
   onSortChange: (sortBy: string) => void;
+  selectedSentiment: string;
+  onSentimentChange: (sentiment: string) => void;
 }
 
-const categories = [
-  "All News",
-  "Politics",
-  "Sports",
-  "Technology",
-  "Health",
-  "Business",
-  "Entertainment",
-  "Science",
-  "World",
-];
-
-const sortOptions = [
-  { value: "latest", label: "Latest" },
-  { value: "popular", label: "Most Popular" },
-  { value: "trending", label: "Trending" },
+const sentimentOptions = [
+  {
+    value: "all",
+    label: "All Sentiments",
+    icon: null,
+    color: "default" as const,
+  },
+  {
+    value: "positive",
+    label: "Positive",
+    icon: IconMoodSmile,
+    color: "success" as const,
+  },
+  {
+    value: "neutral",
+    label: "Neutral",
+    icon: IconMoodNeutral,
+    color: "default" as const,
+  },
+  {
+    value: "negative",
+    label: "Negative",
+    icon: IconMoodSad,
+    color: "error" as const,
+  },
 ];
 
 const NewsFilters: React.FC<NewsFiltersProps> = ({
-  selectedCategories,
-  onCategoryChange,
-  selectedSortBy,
-  onSortChange,
+  selectedSentiment,
+  onSentimentChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleCategoryClick = (category: string) => {
-    if (category === "All News") {
-      onCategoryChange(["All News"]);
-      return;
-    }
-
-    let newCategories: string[];
-    if (selectedCategories.includes(category)) {
-      newCategories = selectedCategories.filter((cat) => cat !== category);
-      if (newCategories.length === 0) {
-        newCategories = ["All News"];
-      }
-    } else {
-      newCategories = selectedCategories.filter((cat) => cat !== "All News");
-      newCategories.push(category);
-    }
-
-    onCategoryChange(newCategories);
-  };
-
-  const handleSortClick = (sortValue: string) => {
-    onSortChange(sortValue);
+  const handleSentimentClick = (sentimentValue: string) => {
+    onSentimentChange(sentimentValue);
   };
 
   return (
@@ -77,9 +69,9 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
       sx={{
         p: 2,
         mb: 3,
-        backgroundColor: "background.default", // Your theme's pastel background
+        backgroundColor: "background.default",
         border: "1px solid",
-        borderColor: "divider", // Light desert sand from your theme
+        borderColor: "divider",
         borderRadius: 2,
       }}
     >
@@ -99,125 +91,85 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
 
         <IconButton size="small">
           {isExpanded ? (
-            <IconChevronUp size={20} />
+            <IconChevronUp size={18} />
           ) : (
-            <IconChevronDown size={20} />
+            <IconChevronDown size={18} />
           )}
         </IconButton>
       </Box>
 
       <Collapse in={isExpanded}>
-        <Box mt={2}>
-          {/* Categories */}
-          <Box mb={3}>
+        <Box sx={{ mt: 2 }}>
+          {/* Sentiment Filter */}
+          <Box sx={{ mb: 3 }}>
             <Typography
               variant="subtitle2"
               color="text.secondary"
-              mb={1.5}
-              sx={{ fontWeight: 600 }}
+              sx={{ mb: 1, fontWeight: 600 }}
             >
-              Categories
+              Sentiment
             </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {categories.map((category) => (
-                <Chip
-                  key={category}
-                  label={category}
-                  onClick={() => handleCategoryClick(category)}
-                  variant={
-                    selectedCategories.includes(category)
-                      ? "filled"
-                      : "outlined"
-                  }
-                  color={
-                    selectedCategories.includes(category)
-                      ? "primary"
-                      : "default"
-                  }
-                  size="small"
-                  sx={{
-                    mb: 1,
-                    "&:hover": {
-                      backgroundColor: selectedCategories.includes(category)
-                        ? "primary.dark"
-                        : "action.hover", // Uses your theme's action hover color
-                    },
-                    ...(selectedCategories.includes(category) && {
-                      backgroundColor: "primary.main",
-                      color: "primary.contrastText",
-                      "& .MuiChip-deleteIcon": {
-                        color: "primary.contrastText",
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {sentimentOptions.map((sentiment) => {
+                const IconComponent = sentiment.icon;
+                return (
+                  <Chip
+                    key={sentiment.value}
+                    label={sentiment.label}
+                    onClick={() => handleSentimentClick(sentiment.value)}
+                    variant={
+                      selectedSentiment === sentiment.value
+                        ? "filled"
+                        : "outlined"
+                    }
+                    color={
+                      selectedSentiment === sentiment.value
+                        ? sentiment.color
+                        : "default"
+                    }
+                    size="small"
+                    icon={
+                      IconComponent ? <IconComponent size={16} /> : undefined
+                    }
+                    sx={{
+                      mb: 1,
+                      "&:hover": {
+                        backgroundColor:
+                          selectedSentiment === sentiment.value
+                            ? `${sentiment.color}.dark`
+                            : "action.hover",
                       },
-                    }),
-                  }}
-                />
-              ))}
-            </Stack>
-          </Box>
-
-          {/* Sort Options */}
-          <Box>
-            <Typography
-              variant="subtitle2"
-              color="text.secondary"
-              mb={1.5}
-              sx={{ fontWeight: 600 }}
-            >
-              Sort by
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {sortOptions.map((option) => (
-                <Chip
-                  key={option.value}
-                  label={option.label}
-                  onClick={() => handleSortClick(option.value)}
-                  variant={
-                    selectedSortBy === option.value ? "filled" : "outlined"
-                  }
-                  color={
-                    selectedSortBy === option.value ? "secondary" : "default"
-                  }
-                  size="small"
-                  sx={{
-                    mb: 1,
-                    "&:hover": {
-                      backgroundColor:
-                        selectedSortBy === option.value
-                          ? "secondary.dark"
-                          : "action.hover", // Uses your theme's action hover color
-                    },
-                    ...(selectedSortBy === option.value && {
-                      backgroundColor: "secondary.main",
-                      color: "secondary.contrastText",
-                      "& .MuiChip-deleteIcon": {
-                        color: "secondary.contrastText",
-                      },
-                    }),
-                  }}
-                />
-              ))}
+                      ...(selectedSentiment === sentiment.value && {
+                        backgroundColor: `${sentiment.color}.main`,
+                        color: `${sentiment.color}.contrastText`,
+                        "& .MuiChip-deleteIcon": {
+                          color: `${sentiment.color}.contrastText`,
+                        },
+                      }),
+                    }}
+                  />
+                );
+              })}
             </Stack>
           </Box>
         </Box>
       </Collapse>
 
       {/* Always visible selected filters summary */}
-      {!isExpanded && (selectedCategories.length > 0 || selectedSortBy) && (
+      {!isExpanded && selectedSentiment !== "all" && (
         <Box mt={1}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            {selectedCategories.length > 0 &&
-              !selectedCategories.includes("All News") && (
-                <Typography variant="caption" color="text.secondary">
-                  {selectedCategories.length} categor
-                  {selectedCategories.length === 1 ? "y" : "ies"}
-                </Typography>
-              )}
-            {selectedSortBy && selectedSortBy !== "latest" && (
-              <Typography variant="caption" color="text.secondary">
-                •{" "}
-                {sortOptions.find((opt) => opt.value === selectedSortBy)?.label}
-              </Typography>
-            )}
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+          >
+            <Typography variant="caption" color="text.secondary">
+              {
+                sentimentOptions.find((opt) => opt.value === selectedSentiment)
+                  ?.label
+              }
+            </Typography>
           </Stack>
         </Box>
       )}

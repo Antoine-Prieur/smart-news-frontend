@@ -25,8 +25,8 @@ interface SourceDocument {
 }
 
 interface SentimentAnalysisResponse {
-  confidence?: number;
-  sentiment: string;
+  prediction_confidence?: number;
+  prediction_value: string;
 }
 
 interface ArticleDocument {
@@ -66,6 +66,7 @@ const Blog = () => {
     "All News",
   ]);
   const [selectedSortBy, setSelectedSortBy] = useState<string>("latest");
+  const [selectedSentiment, setSelectedSentiment] = useState<string>("all");
 
   const parseDate = (
     dateField: string | { $date: { $numberLong: string } } | undefined,
@@ -112,7 +113,7 @@ const Blog = () => {
     }
   };
 
-  const fetchArticles = async (page: number = 1) => {
+  const fetchArticles = async (page: number = 1, sentiment?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -120,20 +121,25 @@ const Blog = () => {
       // Calculate skip value: (page - 1) * perPage
       const skip = (page - 1) * perPage;
 
-      const response = await fetch(
-        buildApiUrl(ENDPOINTS.ARTICLES, {
-          skip: skip.toString(),
-          limit: perPage.toString(),
-        }),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          mode: "cors",
+      // Build query parameters
+      const params: Record<string, string> = {
+        skip: skip.toString(),
+        limit: perPage.toString(),
+      };
+
+      // Add sentiment filter if not "all"
+      if (sentiment && sentiment !== "all") {
+        params.sentiment = sentiment;
+      }
+
+      const response = await fetch(buildApiUrl(ENDPOINTS.ARTICLES, params), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-      );
+        mode: "cors",
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -154,8 +160,14 @@ const Blog = () => {
   };
 
   useEffect(() => {
-    fetchArticles(currentPage);
-  }, [currentPage, perPage]); // Added perPage to dependencies
+    fetchArticles(currentPage, selectedSentiment);
+  }, [currentPage, perPage, selectedSentiment]);
+
+  // Handle sentiment filter change
+  const handleSentimentChange = (sentiment: string) => {
+    setSelectedSentiment(sentiment);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {
@@ -204,14 +216,16 @@ const Blog = () => {
         onCategoryChange={setSelectedCategories}
         selectedSortBy={selectedSortBy}
         onSortChange={setSelectedSortBy}
+        selectedSentiment={selectedSentiment}
+        onSentimentChange={handleSentimentChange}
       />
 
       <Grid container spacing={3}>
         {articles.map((article, index) => {
           const sentimentProps = article.sentiment_analysis
             ? getSentimentDisplayProps(
-                article.sentiment_analysis.sentiment,
-                article.sentiment_analysis.confidence,
+                article.sentiment_analysis.prediction_value,
+                article.sentiment_analysis.prediction_confidence,
               )
             : null;
 
@@ -325,39 +339,44 @@ const Blog = () => {
                       {article.description || "No description available"}
                     </Typography>
                   </Box>
+
                   {/* Article Meta */}
                   <Stack direction="column" spacing={1}>
                     {article.source?.name && (
-                      <Typography variant="caption" color="primary">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontWeight: 500 }}
+                      >
                         {article.source.name}
                       </Typography>
                     )}
 
                     {article.published_at && (
                       <Typography variant="caption" color="text.secondary">
-                        {parseDate(
-                          article.published_at,
-                        )?.toLocaleDateString() || "Date unavailable"}
+                        {parseDate(article.published_at)?.toLocaleDateString()}
                       </Typography>
                     )}
 
                     {article.url && (
-                      <Typography
-                        component={Link}
+                      <Link
                         href={article.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        variant="body2"
-                        color="primary"
-                        sx={{
-                          textDecoration: "none",
-                          "&:hover": {
-                            textDecoration: "underline",
-                          },
-                        }}
+                        style={{ textDecoration: "none" }}
                       >
-                        Read full article →
-                      </Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          sx={{
+                            mt: 1,
+                            width: "100%",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Read Full Article
+                        </Button>
+                      </Link>
                     )}
                   </Stack>
                 </CardContent>
@@ -367,87 +386,32 @@ const Blog = () => {
         })}
       </Grid>
 
-      {/* Enhanced Pagination Controls */}
+      {/* Pagination Controls */}
       <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        gap={2}
-        mt={4}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          mt: 4,
+          gap: 2,
+        }}
       >
-        <button
+        <Button
+          variant="outlined"
           onClick={handlePreviousPage}
           disabled={currentPage === 1}
-          style={{
-            padding: "8px 16px",
-            backgroundColor: currentPage === 1 ? "#f5f5f5" : "#1976d2",
-            color: currentPage === 1 ? "#999" : "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: currentPage === 1 ? "not-allowed" : "pointer",
-          }}
         >
           Previous
-        </button>
-
-        {/* Optional: Add page numbers for easier navigation */}
-        {totalPages <= 10 && (
-          <Box display="flex" gap={1}>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (pageNum) => (
-                <Button
-                  key={pageNum}
-                  onClick={() => handlePageClick(pageNum)}
-                  variant={pageNum === currentPage ? "contained" : "outlined"}
-                  color="primary"
-                  size="small"
-                  sx={{
-                    minWidth: "32px",
-                    height: "32px",
-                    fontSize: "12px",
-                    ...(pageNum === currentPage && {
-                      backgroundColor: (theme) => theme.palette.primary.main,
-                      color: "white",
-                      "&:hover": {
-                        backgroundColor: (theme) => theme.palette.primary.dark,
-                      },
-                    }),
-                    ...(pageNum !== currentPage && {
-                      backgroundColor: (theme) => theme.palette.grey[100],
-                      color: (theme) => theme.palette.text.primary,
-                      borderColor: (theme) => theme.palette.grey[300],
-                      "&:hover": {
-                        backgroundColor: (theme) => theme.palette.grey[200],
-                      },
-                    }),
-                  }}
-                >
-                  {pageNum}
-                </Button>
-              ),
-            )}
-          </Box>
-        )}
+        </Button>
 
         <Typography variant="body2" color="text.secondary">
           Page {currentPage} of {totalPages} ({totalCount} total articles)
         </Typography>
 
         <Button
+          variant="outlined"
           onClick={handleNextPage}
-          disabled={currentPage >= totalPages}
-          variant="contained"
-          color="primary"
-          sx={{
-            ...(currentPage >= totalPages && {
-              backgroundColor: (theme) => theme.palette.grey[300],
-              color: (theme) => theme.palette.grey[500],
-              cursor: "not-allowed",
-              "&:hover": {
-                backgroundColor: (theme) => theme.palette.grey[300],
-              },
-            }),
-          }}
+          disabled={currentPage === totalPages}
         >
           Next
         </Button>
