@@ -43,6 +43,8 @@ export const API_CONFIG = {
     ARTICLES: "/articles",
     METRICS_SUMMARY: "/metrics/summary",
     METRICS_BINS: "/metrics/bins",
+    PREDICTOR_TYPES: "/predictors/types",
+    PREDICTOR_VERSION: "/predictors/versions",
   },
 } as const;
 

@@ -79,16 +79,26 @@ interface MetricSummaryAggregation {
   max_value: number;
 }
 
+interface PredictionTypesResponse {
+  prediction_types: string[];
+}
+
+interface PredictorVersionsResponse {
+  predictor_versions: string[];
+}
+
 interface HistogramProps {
   config: HistogramConfig;
   selectedDays: number;
   selectedPredictionType: string;
+  selectedVersion: string;
 }
 
 interface SingleValueProps {
   config: SingleValueConfig;
   selectedDays: number;
   selectedPredictionType: string;
+  selectedVersion: string;
 }
 
 // Single Value Metric Component
@@ -96,6 +106,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
   config,
   selectedDays,
   selectedPredictionType,
+  selectedVersion,
 }) => {
   const theme = useTheme();
   const [aggregation, setAggregation] =
@@ -112,6 +123,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
         metric_name: config.metricName,
         num_days: selectedDays.toString(),
         prediction_type: selectedPredictionType,
+        version: selectedVersion,
       };
 
       const response = await fetch(
@@ -159,7 +171,12 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
 
   useEffect(() => {
     fetchAggregation();
-  }, [selectedPredictionType, selectedDays, config.metricName]);
+  }, [
+    selectedPredictionType,
+    selectedDays,
+    selectedVersion,
+    config.metricName,
+  ]);
 
   const formatDisplayValue = (
     value: number,
@@ -351,10 +368,12 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
     </DashboardCard>
   );
 };
+
 const MetricHistogram: React.FC<HistogramProps> = ({
   config,
   selectedDays,
   selectedPredictionType,
+  selectedVersion,
 }) => {
   const theme = useTheme();
   const [histogramData, setHistogramData] = useState<ChartData[]>([]);
@@ -370,8 +389,8 @@ const MetricHistogram: React.FC<HistogramProps> = ({
         metric_name: config.metricName,
         num_bins: config.numBins.toString(),
         num_days: selectedDays.toString(),
-        // Add prediction type if needed for filtering
         prediction_type: selectedPredictionType,
+        version: selectedVersion,
       };
 
       const response = await fetch(
@@ -415,7 +434,12 @@ const MetricHistogram: React.FC<HistogramProps> = ({
 
   useEffect(() => {
     fetchHistogramData();
-  }, [selectedPredictionType, selectedDays, config.metricName]);
+  }, [
+    selectedPredictionType,
+    selectedDays,
+    selectedVersion,
+    config.metricName,
+  ]);
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -487,14 +511,119 @@ const MetricHistogram: React.FC<HistogramProps> = ({
 };
 
 // Main Page Component
-const DeploymentsPage = () => {
+const MetricsPage = () => {
   const theme = useTheme();
   const [selectedPredictionType, setSelectedPredictionType] =
-    useState<string>("sentiment_analysis");
+    useState<string>("");
+  const [selectedVersion, setSelectedVersion] = useState<string>("");
   const [selectedDays, setSelectedDays] = useState<number>(14);
 
+  // State for dynamic options
+  const [predictionTypes, setPredictionTypes] = useState<string[]>([]);
+  const [versions, setVersions] = useState<string[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState<boolean>(true);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+
+  // Fetch prediction types
+  const fetchPredictionTypes = async () => {
+    try {
+      const response = await fetch(buildApiUrl(ENDPOINTS.PREDICTOR_TYPES), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        mode: "cors",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: PredictionTypesResponse = await response.json();
+      setPredictionTypes(data.prediction_types);
+
+      // Set default selection if available
+      if (data.prediction_types.length > 0 && !selectedPredictionType) {
+        setSelectedPredictionType(data.prediction_types[0]);
+      }
+    } catch (err) {
+      setOptionsError(
+        err instanceof Error ? err.message : "Failed to fetch prediction types",
+      );
+      console.error("Error fetching prediction types:", err);
+    }
+  };
+
+  // Fetch versions for selected prediction type
+  const fetchVersions = async (predictionType: string) => {
+    if (!predictionType) return;
+
+    try {
+      const params = { prediction_type: predictionType };
+      const response = await fetch(
+        buildApiUrl(ENDPOINTS.PREDICTOR_VERSION, params),
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          mode: "cors",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: PredictorVersionsResponse = await response.json();
+      setVersions(data.predictor_versions);
+
+      // Set default version selection if available
+      if (data.predictor_versions.length > 0 && !selectedVersion) {
+        setSelectedVersion(data.predictor_versions[0]);
+      }
+    } catch (err) {
+      setOptionsError(
+        err instanceof Error ? err.message : "Failed to fetch versions",
+      );
+      console.error("Error fetching versions:", err);
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setLoadingOptions(true);
+      setOptionsError(null);
+
+      await fetchPredictionTypes();
+      setLoadingOptions(false);
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Fetch versions when prediction type changes
+  useEffect(() => {
+    if (selectedPredictionType) {
+      fetchVersions(selectedPredictionType);
+    } else {
+      setVersions([]);
+      setSelectedVersion("");
+    }
+  }, [selectedPredictionType]);
+
   const handlePredictionTypeChange = (event: SelectChangeEvent<string>) => {
-    setSelectedPredictionType(event.target.value);
+    const newPredictionType = event.target.value;
+    setSelectedPredictionType(newPredictionType);
+    // Reset version selection when prediction type changes
+    setSelectedVersion("");
+  };
+
+  const handleVersionChange = (event: SelectChangeEvent<string>) => {
+    setSelectedVersion(event.target.value);
   };
 
   const handleDaysChange = (event: SelectChangeEvent<string>) => {
@@ -505,7 +634,7 @@ const DeploymentsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_latency",
-      title: "Inference Summary",
+      title: "Inference",
       layout: "horizontal",
       values: [
         {
@@ -539,7 +668,7 @@ const DeploymentsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_loading_latency",
-      title: "Loading Latency Summary",
+      title: "Loading Latency",
       layout: "horizontal",
       values: [
         {
@@ -573,7 +702,7 @@ const DeploymentsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_error",
-      title: "Inference Predictor Errors",
+      title: "Inference Errors",
       layout: "horizontal",
       values: [
         {
@@ -588,7 +717,7 @@ const DeploymentsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_loading_error",
-      title: "Predictor Loading Errors",
+      title: "Loading Errors",
       layout: "horizontal",
       values: [
         {
@@ -635,114 +764,163 @@ const DeploymentsPage = () => {
     },
   ];
 
+  // Don't render metrics until we have the required filters selected
+  const shouldRenderMetrics = selectedPredictionType && selectedVersion;
+
   return (
     <PageContainer
-      title="Deployments"
+      title="Metrics"
       description="Monitor and manage your ML model deployments"
     >
       <Box>
         {/* Filter Section */}
-        <DashboardCard title="Deployment Filters">
-          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-            <Box sx={{ minWidth: 200 }}>
-              <FormControl fullWidth>
-                <InputLabel id="prediction-type-label">
-                  Prediction Type
-                </InputLabel>
-                <Select
-                  labelId="prediction-type-label"
-                  id="prediction-type-select"
-                  value={selectedPredictionType}
-                  label="Prediction Type"
-                  onChange={handlePredictionTypeChange}
-                >
-                  <MenuItem value="sentiment_analysis">
-                    Sentiment Analysis
-                  </MenuItem>
-                  <MenuItem value="text_classification">
-                    Text Classification
-                  </MenuItem>
-                  <MenuItem value="image_recognition">
-                    Image Recognition
-                  </MenuItem>
-                </Select>
-              </FormControl>
+        <DashboardCard title="Metric Filters">
+          {loadingOptions ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minHeight="80px"
+            >
+              <CircularProgress size={30} />
             </Box>
+          ) : optionsError ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              Error loading filter options: {optionsError}
+            </Alert>
+          ) : (
+            <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+              <Box sx={{ minWidth: 200 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="prediction-type-label">
+                    Prediction Type
+                  </InputLabel>
+                  <Select
+                    labelId="prediction-type-label"
+                    id="prediction-type-select"
+                    value={selectedPredictionType}
+                    label="Prediction Type"
+                    onChange={handlePredictionTypeChange}
+                  >
+                    {predictionTypes.map((type) => (
+                      <MenuItem key={type} value={type}>
+                        {type
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
 
-            <Box sx={{ minWidth: 150 }}>
-              <FormControl fullWidth>
-                <InputLabel id="days-label">Time Period</InputLabel>
-                <Select
-                  labelId="days-label"
-                  id="days-select"
-                  value={selectedDays.toString()}
-                  label="Time Period"
-                  onChange={handleDaysChange}
-                >
-                  {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => (
-                    <MenuItem key={day} value={day.toString()}>
-                      {day} {day === 1 ? "day" : "days"}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Box sx={{ minWidth: 150 }}>
+                <FormControl fullWidth disabled={!selectedPredictionType}>
+                  <InputLabel id="version-label">Version</InputLabel>
+                  <Select
+                    labelId="version-label"
+                    id="version-select"
+                    value={selectedVersion}
+                    label="Version"
+                    onChange={handleVersionChange}
+                  >
+                    {versions.map((version) => (
+                      <MenuItem key={version} value={version}>
+                        {version}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ minWidth: 150 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="days-label">Time Period</InputLabel>
+                  <Select
+                    labelId="days-label"
+                    id="days-select"
+                    value={selectedDays.toString()}
+                    label="Time Period"
+                    onChange={handleDaysChange}
+                  >
+                    {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => (
+                      <MenuItem key={day} value={day.toString()}>
+                        {day} {day === 1 ? "day" : "days"}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
-          </Box>
+          )}
         </DashboardCard>
 
-        {/* Render all metrics in a responsive grid */}
-        <Box sx={{ mt: 3 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr",
-                md: "1fr 1fr",
-                lg: "repeat(3, 1fr)", // 3 columns on large screens
-                xl: "repeat(4, 1fr)", // 4 columns on extra large screens
-              },
-              gap: 3,
-            }}
-          >
-            {metricConfigs.map((config, index) => {
-              if (config.type === "histogram") {
-                return (
-                  <Box
-                    key={`${config.metricName}-${index}`}
-                    sx={{
-                      gridColumn: {
-                        xs: "span 1",
-                        sm: "span 1",
-                        md: "span 2",
-                        lg: "span 2",
-                        xl: "span 2",
-                      },
-                    }}
-                  >
-                    <MetricHistogram
+        {/* Render metrics only when filters are selected */}
+        {shouldRenderMetrics ? (
+          <Box sx={{ mt: 3 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "1fr",
+                  md: "1fr 1fr",
+                  lg: "repeat(3, 1fr)", // 3 columns on large screens
+                  xl: "repeat(4, 1fr)", // 4 columns on extra large screens
+                },
+                gap: 3,
+              }}
+            >
+              {metricConfigs.map((config, index) => {
+                if (config.type === "histogram") {
+                  return (
+                    <Box
+                      key={`${config.metricName}-${index}`}
+                      sx={{
+                        gridColumn: {
+                          xs: "span 1",
+                          sm: "span 1",
+                          md: "span 2",
+                          lg: "span 2",
+                          xl: "span 2",
+                        },
+                      }}
+                    >
+                      <MetricHistogram
+                        config={config}
+                        selectedDays={selectedDays}
+                        selectedPredictionType={selectedPredictionType}
+                        selectedVersion={selectedVersion}
+                      />
+                    </Box>
+                  );
+                } else {
+                  return (
+                    <SingleValueMetric
+                      key={`${config.metricName}-${index}`}
                       config={config}
                       selectedDays={selectedDays}
                       selectedPredictionType={selectedPredictionType}
+                      selectedVersion={selectedVersion}
                     />
-                  </Box>
-                );
-              } else {
-                return (
-                  <SingleValueMetric
-                    key={`${config.metricName}-${index}`}
-                    config={config}
-                    selectedDays={selectedDays}
-                    selectedPredictionType={selectedPredictionType}
-                  />
-                );
-              }
-            })}
+                  );
+                }
+              })}
+            </Box>
           </Box>
-        </Box>
+        ) : (
+          !loadingOptions &&
+          !optionsError && (
+            <Box sx={{ mt: 3 }}>
+              <Alert severity="info">
+                Please select both a prediction type and version to view
+                metrics.
+              </Alert>
+            </Box>
+          )
+        )}
       </Box>
     </PageContainer>
   );
 };
 
-export default DeploymentsPage;
+export default MetricsPage;
