@@ -41,6 +41,8 @@ export const API_CONFIG = {
   BASE_URL: getApiBaseUrl(),
   ENDPOINTS: {
     ARTICLES: "/articles",
+    METRICS_SUMMARY: "/metrics/summary",
+    METRICS_BINS: "/metrics/bins",
   },
 } as const;
 
