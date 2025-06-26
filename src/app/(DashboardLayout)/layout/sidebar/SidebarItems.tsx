@@ -43,27 +43,6 @@ const renderMenuItems = (items: any, pathDirect: any, theme: any) => {
           icon={itemIcon}
           link={item.href}
           component={Link}
-          // ✅ FIXED: Direct styling on MenuItem
-          sx={{
-            color: theme.palette.text.primary,
-            "&:hover": {
-              backgroundColor: theme.palette.action.hover,
-            },
-            // Better contrast for selected state
-            '&.selected, &[aria-selected="true"]': {
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(74, 94, 138, 0.25) !important"
-                  : "rgba(49, 62, 91, 0.15) !important",
-              borderLeft: `4px solid ${theme.palette.primary.main} !important`,
-              borderRadius: "0 8px 8px 0 !important",
-              color: `${theme.palette.text.primary} !important`,
-              fontWeight: "600 !important",
-              "& .MuiSvgIcon-root, & svg": {
-                color: `${theme.palette.primary.main} !important`,
-              },
-            },
-          }}
         >
           {item.title}
         </MenuItem>
