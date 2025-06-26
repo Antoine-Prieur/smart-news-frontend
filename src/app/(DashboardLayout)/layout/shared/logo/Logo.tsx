@@ -2,15 +2,15 @@ import Link from "next/link";
 import { styled } from "@mui/material";
 import Image from "next/image";
 
+// ✅ FIXED: Proper container with explicit dimensions
 const LinkStyled = styled(Link)(() => ({
   height: "40px",
-  width: "auto",
+  width: "180px", // Give it a fixed width
   position: "relative",
-  display: "block",
-  marginLeft: "4px",
-  marginRight: "4px",
-  marginTop: "16px",
-  marginBottom: "32px",
+  margin: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 }));
 
 const Logo = () => {
@@ -19,9 +19,13 @@ const Logo = () => {
       <Image
         src="/images/logos/smart-news-logo.png"
         alt="logo"
-        fill
+        // ✅ FIXED: Use explicit width/height instead of fill
+        width={180}
+        height={40}
         style={{
-          objectFit: "contain", // Keeps ratio, fits within container
+          objectFit: "contain",
+          maxWidth: "100%",
+          height: "auto",
         }}
         priority
       />
@@ -30,4 +34,3 @@ const Logo = () => {
 };
 
 export default Logo;
-

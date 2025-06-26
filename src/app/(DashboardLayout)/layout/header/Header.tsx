@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React from "react";
 import {
   Box,
   AppBar,
@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { IconMenu, IconSun, IconMoon } from "@tabler/icons-react";
-import Logo from "../shared/logo/Logo";
+import { useThemeContext } from "@/contexts/ThemeContext";
 
 interface ItemType {
   toggleMobileSidebar: (event: React.MouseEvent<HTMLElement>) => void;
@@ -19,18 +19,16 @@ interface ItemType {
 
 const Header = ({ toggleMobileSidebar }: ItemType) => {
   const theme = useTheme();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, toggleTheme } = useThemeContext();
 
   const AppBarStyled = styled(AppBar)(({ theme }) => ({
     boxShadow: "none",
-    // Use the pastel background from your theme
-    background: theme.palette.background.default, // This is your #fcf8f7
+    background: theme.palette.background.default,
     justifyContent: "center",
     backdropFilter: "blur(4px)",
-    // Add a more visible border at the bottom
-    borderBottom: `1px solid ${theme.palette.divider}`, // Slightly thicker border
+    borderBottom: `1px solid ${theme.palette.divider}`,
     position: "relative",
-    zIndex: 1200, // Ensure it stays above content
+    zIndex: 1200,
     [theme.breakpoints.up("lg")]: {
       minHeight: "70px",
     },
@@ -45,21 +43,6 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
     alignItems: "center",
   }));
 
-  // Styled logo container for header
-  const LogoContainer = styled(Box)(({ theme }) => ({
-    height: "45px",
-    width: "auto",
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    marginRight: theme.spacing(2),
-    // Hide logo on mobile when sidebar is available
-    [theme.breakpoints.down("lg")]: {
-      display: "none",
-    },
-  }));
-
-  // Custom styled switch to match your theme
   const ThemeSwitch = styled(Switch)(({ theme }) => ({
     "& .MuiSwitch-switchBase": {
       color: theme.palette.grey[300],
@@ -77,22 +60,9 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
     },
   }));
 
-  const handleThemeToggle = () => {
-    setIsDarkMode(!isDarkMode);
-    // Here you would typically call a context method to actually change the theme
-    // For now, this is just a visual toggle
-    console.log("Theme toggle clicked:", !isDarkMode ? "Dark" : "Light");
-  };
-
   return (
     <AppBarStyled position="sticky" color="default">
       <ToolbarStyled>
-        {/* Logo - always visible on desktop */}
-        <LogoContainer>
-          <Logo />
-        </LogoContainer>
-
-        {/* Mobile menu button */}
         <IconButton
           color="inherit"
           aria-label="menu"
@@ -108,10 +78,8 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
           <IconMenu width="20" height="20" />
         </IconButton>
 
-        {/* Spacer to push content to the right */}
         <Box flexGrow={1} />
 
-        {/* Theme Toggle Switch */}
         <Box
           display="flex"
           alignItems="center"
@@ -127,7 +95,7 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
               control={
                 <ThemeSwitch
                   checked={isDarkMode}
-                  onChange={handleThemeToggle}
+                  onChange={toggleTheme}
                   size="small"
                 />
               }
@@ -140,7 +108,6 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
             />
           </Tooltip>
 
-          {/* Theme icon indicator */}
           <IconButton
             size="small"
             sx={{

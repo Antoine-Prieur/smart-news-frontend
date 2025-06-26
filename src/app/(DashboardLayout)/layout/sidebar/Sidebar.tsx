@@ -1,8 +1,6 @@
 import { useMediaQuery, Box, Drawer } from "@mui/material";
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from "@mui/material/styles";
 import SidebarItems from "./SidebarItems";
-
-
 
 interface ItemType {
   isMobileSidebarOpen: boolean;
@@ -20,23 +18,41 @@ const MSidebar = ({
 
   const sidebarWidth = "270px";
 
-  // Custom CSS for short scrollbar
+  // Theme-aware scrollbar styles
   const scrollbarStyles = {
-    '&::-webkit-scrollbar': {
-      width: '7px',
+    "&::-webkit-scrollbar": {
+      width: "7px",
     },
-    '&::-webkit-scrollbar-thumb': {
-      backgroundColor: theme.palette.grey[200], // ← Uses theme color instead of hardcoded
-      borderRadius: '15px',
-      '&:hover': {
-        backgroundColor: theme.palette.grey[300], // ← Hover effect with theme color
-      }
+    "&::-webkit-scrollbar-thumb": {
+      backgroundColor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[600]
+          : theme.palette.grey[300],
+      borderRadius: "15px",
+      "&:hover": {
+        backgroundColor:
+          theme.palette.mode === "dark"
+            ? theme.palette.grey[500]
+            : theme.palette.grey[400],
+      },
     },
-    '&::-webkit-scrollbar-track': {
-      backgroundColor: theme.palette.grey[100], // ← Track color with theme
+    "&::-webkit-scrollbar-track": {
+      backgroundColor:
+        theme.palette.mode === "dark"
+          ? theme.palette.grey[800]
+          : theme.palette.grey[100],
     },
   };
 
+  // ✅ FIXED: Proper drawer paper styling
+  const drawerPaperSx = {
+    boxSizing: "border-box",
+    width: sidebarWidth,
+    backgroundColor: theme.palette.background.default, // Use theme background
+    borderRight: `1px solid ${theme.palette.divider}`, // Clean single border
+    boxShadow: "none", // Remove any shadow
+    ...scrollbarStyles,
+  };
 
   if (lgUp) {
     return (
@@ -46,41 +62,19 @@ const MSidebar = ({
           flexShrink: 0,
         }}
       >
-        {/* ------------------------------------------- */}
-        {/* Sidebar for desktop */}
-        {/* ------------------------------------------- */}
         <Drawer
           anchor="left"
           open={isSidebarOpen}
           variant="permanent"
           slotProps={{
             paper: {
-              sx: {
-                boxSizing: "border-box",
-                ...scrollbarStyles,
-                width: sidebarWidth,
-              },
-            }
+              sx: drawerPaperSx,
+            },
           }}
         >
-          {/* ------------------------------------------- */}
-          {/* Sidebar Box */}
-          {/* ------------------------------------------- */}
-          <Box
-            sx={{
-              height: "100%",
-            }}
-          >
-
-            <Box>
-              {/* ------------------------------------------- */}
-              {/* Sidebar Items */}
-              {/* ------------------------------------------- */}
-              <SidebarItems />
-            </Box>
-          </Box>
+          <SidebarItems />
         </Drawer>
-      </Box >
+      </Box>
     );
   }
 
@@ -90,35 +84,18 @@ const MSidebar = ({
       open={isMobileSidebarOpen}
       onClose={onSidebarClose}
       variant="temporary"
-
       slotProps={{
         paper: {
           sx: {
-            boxShadow: (theme) => theme.shadows[8],
-            ...scrollbarStyles,
+            ...drawerPaperSx,
+            boxShadow: theme.shadows[8], // Shadow only for mobile overlay
           },
-        }
+        },
       }}
     >
-      {/* ------------------------------------------- */}
-      {/* Sidebar Box */}
-      {/* ------------------------------------------- */}
-      <Box>
-        {/* ------------------------------------------- */}
-        {/* Sidebar Items */}
-        {/* ------------------------------------------- */}
-        <SidebarItems />
-      </Box>
-      {/* ------------------------------------------- */}
-      {/* Sidebar For Mobile */}
-      {/* ------------------------------------------- */}
+      <SidebarItems />
     </Drawer>
   );
 };
 
 export default MSidebar;
-
-
-
-
-

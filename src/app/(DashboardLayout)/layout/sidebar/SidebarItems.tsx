@@ -10,21 +10,17 @@ import {
 import { IconPoint } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Upgrade } from "./Updrade";
 import Logo from "../shared/logo/Logo";
 
-const renderMenuItems = (items: any, pathDirect: any) => {
+const renderMenuItems = (items: any, pathDirect: any, theme: any) => {
   return items.map((item: any) => {
     const Icon = item.icon ? item.icon : IconPoint;
-
     const itemIcon = <Icon stroke={1.5} size="1.3rem" />;
 
     if (item.subheader) {
-      // Display Subheader
       return <Menu subHeading={item.subheader} key={item.subheader} />;
     }
 
-    //If the item has children (submenu)
     if (item.children) {
       return (
         <Submenu
@@ -33,12 +29,11 @@ const renderMenuItems = (items: any, pathDirect: any) => {
           icon={itemIcon}
           borderRadius="7px"
         >
-          {renderMenuItems(item.children, pathDirect)}
+          {renderMenuItems(item.children, pathDirect, theme)}
         </Submenu>
       );
     }
 
-    // If the item has no children, render a MenuItem
     return (
       <Box px={3} key={item.id}>
         <MenuItem
@@ -48,6 +43,27 @@ const renderMenuItems = (items: any, pathDirect: any) => {
           icon={itemIcon}
           link={item.href}
           component={Link}
+          // ✅ FIXED: Direct styling on MenuItem
+          sx={{
+            color: theme.palette.text.primary,
+            "&:hover": {
+              backgroundColor: theme.palette.action.hover,
+            },
+            // Better contrast for selected state
+            '&.selected, &[aria-selected="true"]': {
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(74, 94, 138, 0.25) !important"
+                  : "rgba(49, 62, 91, 0.15) !important",
+              borderLeft: `4px solid ${theme.palette.primary.main} !important`,
+              borderRadius: "0 8px 8px 0 !important",
+              color: `${theme.palette.text.primary} !important`,
+              fontWeight: "600 !important",
+              "& .MuiSvgIcon-root, & svg": {
+                color: `${theme.palette.primary.main} !important`,
+              },
+            },
+          }}
         >
           {item.title}
         </MenuItem>
@@ -56,59 +72,72 @@ const renderMenuItems = (items: any, pathDirect: any) => {
   });
 };
 
-// Styled wrapper for the sidebar to apply custom background
+// ✅ FIXED: Clean wrapper without unnecessary overrides
 const SidebarWrapper = styled(Box)(({ theme }) => ({
   height: "100%",
-  // Apply your beautiful pastel background
-  backgroundColor: theme.palette.background.default, // #fcf8f7
-  // Add some subtle styling
-  borderRight: `1px solid ${theme.palette.divider}`, // #e5d5cd
+  backgroundColor: theme.palette.background.default,
 
-  // Override the react-mui-sidebar default styles
+  // Target the react-mui-sidebar components directly
+  "& .react-mui-sidebar": {
+    backgroundColor: "transparent !important",
+  },
+
+  // Clean menu styling
   "& .MuiBox-root": {
     backgroundColor: "transparent !important",
   },
 
-  // Style the sidebar content
-  "& .sidebar-content": {
-    backgroundColor: "transparent",
+  // Logo container styling
+  "& .logo-section": {
+    padding: theme.spacing(2),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
   },
 
-  // Ensure menu items have proper hover effects with your theme
-  "& .menu-item:hover": {
-    backgroundColor: theme.palette.action.hover, // #f6f1ee
+  // Menu headers
+  "& .menu-subheading": {
+    color: `${theme.palette.text.secondary} !important`,
+    fontWeight: 500,
+    textTransform: "uppercase",
+    fontSize: "0.75rem",
+    letterSpacing: "0.5px",
+    padding: `${theme.spacing(1)} ${theme.spacing(3)}`,
   },
+}));
 
-  // Style selected menu items
-  "& .menu-item.selected": {
-    backgroundColor: `${theme.palette.primary.light}15`, // Light blue with opacity
-    borderLeft: `3px solid ${theme.palette.primary.main}`,
-  },
+const LogoSection = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2),
+  // borderBottom: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.default,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 }));
 
 const SidebarItems = () => {
   const pathname = usePathname();
   const pathDirect = pathname;
-
-  // Get theme colors
   const theme = useTheme();
 
   return (
     <SidebarWrapper>
+      <LogoSection>
+        <Logo />
+      </LogoSection>
+
       <MUI_Sidebar
-        width={"100%"}
+        width="100%"
         showProfile={false}
-        themeColor={theme.palette.primary.main} // ← Your Delft Blue
-        themeSecondaryColor={theme.palette.secondary.main} // ← Your Peach
-        // Additional props to try to control background
-        backgroundColor={theme.palette.background.default}
+        themeColor={theme.palette.primary.main}
+        themeSecondaryColor={theme.palette.secondary.main}
         style={{
-          backgroundColor: theme.palette.background.default,
+          backgroundColor: "transparent",
+          border: "none",
         }}
       >
-        <Logo />
-
-        {renderMenuItems(Menuitems, pathDirect)}
+        <Box sx={{ backgroundColor: "transparent" }}>
+          {renderMenuItems(Menuitems, pathDirect, theme)}
+        </Box>
       </MUI_Sidebar>
     </SidebarWrapper>
   );
