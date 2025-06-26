@@ -615,7 +615,7 @@ const DeploymentsPage = () => {
       metricName: "predictor_loading_latency",
       title: "Predictor Loading Latency Distribution",
       yAxisLabel: "Count",
-      barName: "Preictor loading latency",
+      barName: "Predictor loading latency",
       numBins: 10,
       formatBinLabel: (bin) => `${bin.bin_start}s - ${bin.bin_end}s`,
       color: theme.palette.primary.main,
