@@ -86,24 +86,24 @@ const Blog = () => {
   };
 
   // Helper function to get sentiment color and icon
-  const getSentimentDisplayProps = (sentiment: string, confidence?: number) => {
+  const getSentimentDisplayProps = (sentiment: string) => {
     const normalizedSentiment = sentiment.toLowerCase();
 
     switch (normalizedSentiment) {
       case "positive":
         return {
           color: "success" as const,
-          label: `😊 Positive${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+          label: `😊 Positive`,
         };
       case "negative":
         return {
           color: "error" as const,
-          label: `😞 Negative${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+          label: `😞 Negative`,
         };
       case "neutral":
         return {
           color: "default" as const,
-          label: `😐 Neutral${confidence ? ` (${Math.round(confidence * 100)}%)` : ""}`,
+          label: `😐 Neutral`,
         };
       default:
         return {
@@ -181,13 +181,6 @@ const Blog = () => {
     }
   };
 
-  // Add this function to handle direct page navigation (optional)
-  const handlePageClick = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
   if (loading) {
     return (
       <Box
@@ -225,7 +218,6 @@ const Blog = () => {
           const sentimentProps = article.sentiment_analysis
             ? getSentimentDisplayProps(
                 article.sentiment_analysis.prediction_value,
-                article.sentiment_analysis.prediction_confidence,
               )
             : null;
 

@@ -461,6 +461,7 @@ const MetricHistogram: React.FC<HistogramProps> = ({
                     position: "insideLeft",
                   }}
                   tick={{ fontSize: 12 }}
+                  allowDecimals={false}
                 />
                 <Tooltip
                   formatter={(value, _name) => [value, "Count"]}
@@ -500,7 +501,6 @@ const DeploymentsPage = () => {
     setSelectedDays(parseInt(event.target.value));
   };
 
-  // Configuration for all metrics - easy to add new ones here!
   const metricConfigs: MetricConfig[] = [
     {
       type: "single_value",
@@ -511,7 +511,7 @@ const DeploymentsPage = () => {
         {
           field: "count",
           label: "Requests",
-          formatValue: (value) => `${value}`,
+          formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.primary.main,
           isPrimary: true,
         },
@@ -525,13 +525,13 @@ const DeploymentsPage = () => {
         {
           field: "min_value",
           label: "Min",
-          formatValue: (value) => `${value.toFixed(1)}s`,
+          formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.success.main,
         },
         {
           field: "max_value",
           label: "Max",
-          formatValue: (value) => `${value.toFixed(1)}s`,
+          formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.error.main,
         },
       ],
@@ -545,7 +545,7 @@ const DeploymentsPage = () => {
         {
           field: "count",
           label: "Loading count",
-          formatValue: (value) => `${value}`,
+          formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.primary.main,
           isPrimary: true,
         },
@@ -559,13 +559,13 @@ const DeploymentsPage = () => {
         {
           field: "min_value",
           label: "Min",
-          formatValue: (value) => `${value.toFixed(1)}s`,
+          formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.success.main,
         },
         {
           field: "max_value",
           label: "Max",
-          formatValue: (value) => `${value.toFixed(1)}s`,
+          formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.error.main,
         },
       ],
@@ -579,7 +579,7 @@ const DeploymentsPage = () => {
         {
           field: "count",
           label: "Count",
-          formatValue: (value) => `${value.toFixed(2)}`,
+          formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.error.main,
           isPrimary: true,
         },
@@ -594,7 +594,7 @@ const DeploymentsPage = () => {
         {
           field: "count",
           label: "Count",
-          formatValue: (value) => `${value.toFixed(2)}`,
+          formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.error.main,
           isPrimary: true,
         },
@@ -607,7 +607,8 @@ const DeploymentsPage = () => {
       yAxisLabel: "Count",
       barName: "Predictor latency",
       numBins: 10,
-      formatBinLabel: (bin) => `${bin.bin_start}s - ${bin.bin_end}s`,
+      formatBinLabel: (bin) =>
+        `${bin.bin_start.toFixed(2)}s - ${bin.bin_end.toFixed(2)}s`,
       color: theme.palette.primary.main,
     },
     {
@@ -617,7 +618,19 @@ const DeploymentsPage = () => {
       yAxisLabel: "Count",
       barName: "Predictor loading latency",
       numBins: 10,
-      formatBinLabel: (bin) => `${bin.bin_start}s - ${bin.bin_end}s`,
+      formatBinLabel: (bin) =>
+        `${bin.bin_start.toFixed(2)}s - ${bin.bin_end.toFixed(2)}s`,
+      color: theme.palette.primary.main,
+    },
+    {
+      type: "histogram",
+      metricName: "predictor_price",
+      title: "Predictor Price Per Call Distribution",
+      yAxisLabel: "Count",
+      barName: "Predictor price per call",
+      numBins: 10,
+      formatBinLabel: (bin) =>
+        `${bin.bin_start.toFixed(2)}$ - ${bin.bin_end.toFixed(2)}$`,
       color: theme.palette.primary.main,
     },
   ];
@@ -683,9 +696,9 @@ const DeploymentsPage = () => {
             sx={{
               display: "grid",
               gridTemplateColumns: {
-                xs: "1fr", // 1 column on extra small screens
-                sm: "1fr", // 1 column on small screens
-                md: "1fr 1fr", // 2 columns on medium screens
+                xs: "1fr",
+                sm: "1fr",
+                md: "1fr 1fr",
                 lg: "repeat(3, 1fr)", // 3 columns on large screens
                 xl: "repeat(4, 1fr)", // 4 columns on extra large screens
               },
@@ -701,9 +714,9 @@ const DeploymentsPage = () => {
                       gridColumn: {
                         xs: "span 1",
                         sm: "span 1",
-                        md: "span 2", // Histograms take 2 columns on medium+
-                        lg: "span 2", // Histograms take 2 columns on large
-                        xl: "span 2", // Histograms take 2 columns on xl
+                        md: "span 2",
+                        lg: "span 2",
+                        xl: "span 2",
                       },
                     }}
                   >
