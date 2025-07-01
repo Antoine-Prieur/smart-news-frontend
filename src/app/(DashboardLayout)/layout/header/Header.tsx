@@ -146,7 +146,14 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
           <IconMenu width="20" height="20" />
         </IconButton>
 
-        <SloganContainer>
+        <SloganContainer
+          sx={{
+            display: {
+              xs: "none", // Hide on mobile
+              sm: "flex", // Show on larger screens
+            },
+          }}
+        >
           <IconGlobe
             size={16}
             style={{
