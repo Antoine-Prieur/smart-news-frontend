@@ -286,9 +286,14 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
                       <Chip
                         label={`${data.traffic_percentage}%`}
                         size="small"
-                        color={
-                          data.traffic_percentage > 0 ? "success" : "default"
-                        }
+                        sx={{
+                          backgroundColor:
+                            data.traffic_percentage > 0
+                              ? theme.palette.success.dark
+                              : "default",
+                          color:
+                            data.traffic_percentage > 0 ? "white" : "inherit",
+                        }}
                       />
                     </TableCell>
                     {config.values.map((value) => {
@@ -446,7 +451,13 @@ const MetricHistogram: React.FC<HistogramProps> = ({
                   <Chip
                     label={`${vh.traffic_percentage}% traffic`}
                     size="small"
-                    color={vh.traffic_percentage > 0 ? "success" : "default"}
+                    sx={{
+                      backgroundColor:
+                        vh.traffic_percentage > 0
+                          ? theme.palette.success.dark
+                          : "default",
+                      color: vh.traffic_percentage > 0 ? "white" : "inherit",
+                    }}
                   />
                 </Box>
 
@@ -658,7 +669,7 @@ const MetricsPage = () => {
           field: "min_value",
           label: "Min",
           formatValue: (value) => `${value.toFixed(2)}s`,
-          color: theme.palette.success.main,
+          color: theme.palette.success.dark,
         },
         {
           field: "max_value",
@@ -692,7 +703,7 @@ const MetricsPage = () => {
           field: "min_value",
           label: "Min",
           formatValue: (value) => `${value.toFixed(2)}s`,
-          color: theme.palette.success.main,
+          color: theme.palette.success.dark,
         },
         {
           field: "max_value",

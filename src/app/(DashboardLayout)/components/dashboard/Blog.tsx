@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+
+import { useTheme } from "@mui/material/styles";
 import {
   Card,
   CardContent,
@@ -55,6 +57,7 @@ interface PaginatedArticlesResponse {
 }
 
 const Blog = () => {
+  const theme = useTheme();
   const [articles, setArticles] = useState<ArticleDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,21 +97,35 @@ const Blog = () => {
         return {
           color: "success" as const,
           label: `😊 Positive`,
+          sx: {
+            backgroundColor: theme.palette.success.dark, // Use theme's dark green
+            color: "white",
+            fontWeight: 600,
+          },
         };
       case "negative":
         return {
           color: "error" as const,
           label: `😞 Negative`,
+          sx: {
+            fontWeight: 600,
+          },
         };
       case "neutral":
         return {
           color: "default" as const,
           label: `😐 Neutral`,
+          sx: {
+            fontWeight: 600,
+          },
         };
       default:
         return {
           color: "default" as const,
           label: "Unknown",
+          sx: {
+            fontWeight: 600,
+          },
         };
     }
   };
@@ -291,7 +308,7 @@ const Blog = () => {
                           color={sentimentProps.color}
                           size="small"
                           sx={{
-                            fontWeight: 600,
+                            ...sentimentProps.sx, // Spread the custom sx styles
                           }}
                         />
                       </Box>

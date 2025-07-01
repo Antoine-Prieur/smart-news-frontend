@@ -8,6 +8,7 @@ import {
   IconButton,
   Collapse,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import {
   IconFilter,
   IconChevronDown,
@@ -58,9 +59,28 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
   onSentimentChange,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const theme = useTheme();
 
   const handleSentimentClick = (sentimentValue: string) => {
     onSentimentChange(sentimentValue);
+  };
+
+  // Function to get custom styles for sentiment chips
+  const getSentimentChipStyles = (sentiment: any, isSelected: boolean) => {
+    if (sentiment.value === "positive" && isSelected) {
+      return {
+        backgroundColor: theme.palette.success.dark,
+        color: "white",
+        "&:hover": {
+          backgroundColor: theme.palette.success.dark,
+          filter: "brightness(0.9)",
+        },
+        "& .MuiChip-icon": {
+          color: "white",
+        },
+      };
+    }
+    return {};
   };
 
   return (
@@ -112,40 +132,39 @@ const NewsFilters: React.FC<NewsFiltersProps> = ({
             <Stack direction="row" spacing={1} flexWrap="wrap">
               {sentimentOptions.map((sentiment) => {
                 const IconComponent = sentiment.icon;
+                const isSelected = selectedSentiment === sentiment.value;
+
                 return (
                   <Chip
                     key={sentiment.value}
                     label={sentiment.label}
                     onClick={() => handleSentimentClick(sentiment.value)}
-                    variant={
-                      selectedSentiment === sentiment.value
-                        ? "filled"
-                        : "outlined"
-                    }
-                    color={
-                      selectedSentiment === sentiment.value
-                        ? sentiment.color
-                        : "default"
-                    }
+                    variant={isSelected ? "filled" : "outlined"}
+                    color={isSelected ? sentiment.color : "default"}
                     size="small"
                     icon={
                       IconComponent ? <IconComponent size={16} /> : undefined
                     }
                     sx={{
                       mb: 1,
-                      "&:hover": {
-                        backgroundColor:
-                          selectedSentiment === sentiment.value
+                      ...getSentimentChipStyles(sentiment, isSelected),
+                      // Keep the original hover logic for non-positive sentiments
+                      ...((!isSelected || sentiment.value !== "positive") && {
+                        "&:hover": {
+                          backgroundColor: isSelected
                             ? `${sentiment.color}.dark`
                             : "action.hover",
-                      },
-                      ...(selectedSentiment === sentiment.value && {
-                        backgroundColor: `${sentiment.color}.main`,
-                        color: `${sentiment.color}.contrastText`,
-                        "& .MuiChip-deleteIcon": {
-                          color: `${sentiment.color}.contrastText`,
                         },
                       }),
+                      // Keep original selected logic for non-positive sentiments
+                      ...(isSelected &&
+                        sentiment.value !== "positive" && {
+                          backgroundColor: `${sentiment.color}.main`,
+                          color: `${sentiment.color}.contrastText`,
+                          "& .MuiChip-deleteIcon": {
+                            color: `${sentiment.color}.contrastText`,
+                          },
+                        }),
                     }}
                   />
                 );
