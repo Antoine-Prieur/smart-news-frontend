@@ -123,7 +123,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
         metric_name: config.metricName,
         num_days: selectedDays.toString(),
         prediction_type: selectedPredictionType,
-        version: selectedVersion,
+        predictor_version: selectedVersion,
       };
 
       const response = await fetch(
@@ -390,7 +390,7 @@ const MetricHistogram: React.FC<HistogramProps> = ({
         num_bins: config.numBins.toString(),
         num_days: selectedDays.toString(),
         prediction_type: selectedPredictionType,
-        version: selectedVersion,
+        predictor_version: selectedVersion,
       };
 
       const response = await fetch(
