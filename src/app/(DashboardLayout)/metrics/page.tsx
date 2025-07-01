@@ -7,6 +7,8 @@ import {
   TableRow,
   Chip,
   Typography,
+  Tooltip as MuiTooltip,
+  Grid,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { Checkbox, ListItemText } from "@mui/material";
@@ -49,6 +51,7 @@ interface HistogramConfig {
   type: "histogram";
   metricName: string;
   title: string;
+  description?: string;
   yAxisLabel: string;
   barName: string;
   numBins: number;
@@ -60,6 +63,7 @@ interface SingleValueConfig {
   type: "single_value";
   metricName: string;
   title: string;
+  description?: string;
   values: {
     field: "avg_value" | "sum_value" | "count" | "min_value" | "max_value";
     label: string;
@@ -122,7 +126,97 @@ interface VersionMetricData {
   version: number;
   aggregation: MetricSummaryAggregation;
   traffic_percentage: number;
+  description: string;
 }
+
+const PredictorTrafficSummary: React.FC<{
+  availableVersions: PredictorDocument[];
+  selectedPredictionType: string;
+}> = ({ availableVersions, selectedPredictionType }) => {
+  const theme = useTheme();
+
+  const sortedPredictors = [...availableVersions].sort(
+    (a, b) => a.predictor_version - b.predictor_version,
+  );
+
+  return (
+    <DashboardCard
+      title={`Traffic Distribution`}
+      description="Shows the percentage of prediction requests handled by each model version. Traffic percentages should sum to 100% across all active predictors."
+    >
+      <Box sx={{ p: 2 }}>
+        <Grid container spacing={1}>
+          {sortedPredictors.map((predictor) => (
+            <Grid
+              key={predictor.predictor_version}
+              size={{
+                xs: 6,
+                sm: 4,
+                md: 3,
+              }}
+            >
+              <MuiTooltip
+                title={
+                  predictor.predictor_description ||
+                  `Version ${predictor.predictor_version} - No description available`
+                }
+                placement="top"
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1.5,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    backgroundColor:
+                      predictor.traffic_percentage > 0
+                        ? "action.hover"
+                        : "background.paper",
+                    cursor: "help",
+                    transition: "all 0.2s ease-in-out",
+                    "&:hover": {
+                      backgroundColor:
+                        predictor.traffic_percentage > 0
+                          ? "action.selected"
+                          : "action.hover",
+                      transform: "translateY(-1px)",
+                      boxShadow: 1,
+                    },
+                  }}
+                >
+                  <Chip
+                    label={`V${predictor.predictor_version}`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`${predictor.traffic_percentage}%`}
+                    size="small"
+                    sx={{
+                      backgroundColor:
+                        predictor.traffic_percentage > 0
+                          ? theme.palette.success.main
+                          : theme.palette.grey[300],
+                      color:
+                        predictor.traffic_percentage > 0
+                          ? "white"
+                          : "text.secondary",
+                      fontWeight: "bold",
+                    }}
+                  />
+                </Box>
+              </MuiTooltip>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </DashboardCard>
+  );
+};
 
 // Single Value Metric Component
 const SingleValueMetric: React.FC<SingleValueProps> = ({
@@ -164,6 +258,10 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
         );
 
         if (response.status === 404) {
+          const predictor = availableVersions.find(
+            (p) => p.predictor_version === version,
+          );
+
           return {
             version,
             aggregation: {
@@ -174,6 +272,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
               max_value: 0,
             },
             traffic_percentage: 0,
+            description: predictor?.predictor_description || "",
           };
         }
 
@@ -192,6 +291,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
           version,
           aggregation: data,
           traffic_percentage: predictor?.traffic_percentage || 0,
+          description: predictor?.predictor_description || "",
         };
       });
 
@@ -238,7 +338,7 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
 
   return (
     <Box>
-      <DashboardCard title={config.title}>
+      <DashboardCard title={config.title} description={config.description}>
         {loading ? (
           <Box display="flex" justifyContent="center" p={3}>
             <CircularProgress size={30} />
@@ -261,9 +361,6 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
                   <TableCell>
                     <strong>Version</strong>
                   </TableCell>
-                  <TableCell>
-                    <strong>Traffic %</strong>
-                  </TableCell>
                   {config.values.map((value) => (
                     <TableCell key={value.field} align="right">
                       <strong>{value.label}</strong>
@@ -274,28 +371,32 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
               <TableBody>
                 {versionData.map((data) => (
                   <TableRow key={data.version}>
-                    <TableCell>
+                    <MuiTooltip
+                      title={data.description || "No description available"}
+                      placement="top"
+                      arrow
+                      slotProps={{
+                        tooltip: {
+                          sx: {
+                            backgroundColor: "primary.main",
+                            color: "white",
+                            fontSize: "0.875rem",
+                            maxWidth: 300,
+                            "& .MuiTooltip-arrow": {
+                              color: "primary.main",
+                            },
+                          },
+                        },
+                      }}
+                    >
                       <Chip
                         label={`V${data.version}`}
                         size="small"
                         color="primary"
                         variant="outlined"
+                        sx={{ cursor: "help" }}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={`${data.traffic_percentage}%`}
-                        size="small"
-                        sx={{
-                          backgroundColor:
-                            data.traffic_percentage > 0
-                              ? theme.palette.success.dark
-                              : "default",
-                          color:
-                            data.traffic_percentage > 0 ? "white" : "inherit",
-                        }}
-                      />
-                    </TableCell>
+                    </MuiTooltip>
                     {config.values.map((value) => {
                       const rawValue = data.aggregation[value.field];
                       const formattedValue = value.formatValue
@@ -342,6 +443,7 @@ const MetricHistogram: React.FC<HistogramProps> = ({
       version: number;
       bins: MetricBin[];
       traffic_percentage: number;
+      description: string;
     }[]
   >([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -374,10 +476,15 @@ const MetricHistogram: React.FC<HistogramProps> = ({
         );
 
         if (response.status === 404) {
+          const predictor = availableVersions.find(
+            (p) => p.predictor_version === version,
+          );
+
           return {
             version,
             bins: [],
             traffic_percentage: 0,
+            description: predictor?.predictor_description || "",
           };
         }
 
@@ -394,6 +501,7 @@ const MetricHistogram: React.FC<HistogramProps> = ({
           version,
           bins: data.metric_bins,
           traffic_percentage: predictor?.traffic_percentage || 0,
+          description: predictor?.predictor_description || "",
         };
       });
 
@@ -417,7 +525,7 @@ const MetricHistogram: React.FC<HistogramProps> = ({
 
   return (
     <Box>
-      <DashboardCard title={config.title}>
+      <DashboardCard title={config.title} description={config.description}>
         {loading ? (
           <Box display="flex" justifyContent="center" p={3}>
             <CircularProgress size={30} />
@@ -443,22 +551,31 @@ const MetricHistogram: React.FC<HistogramProps> = ({
                 <Box
                   sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}
                 >
-                  <Chip
-                    label={`Version ${vh.version}`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={`${vh.traffic_percentage}% traffic`}
-                    size="small"
-                    sx={{
-                      backgroundColor:
-                        vh.traffic_percentage > 0
-                          ? theme.palette.success.dark
-                          : "default",
-                      color: vh.traffic_percentage > 0 ? "white" : "inherit",
+                  <MuiTooltip
+                    title={vh.description || "No description available"}
+                    placement="top"
+                    arrow
+                    slotProps={{
+                      tooltip: {
+                        sx: {
+                          backgroundColor: "primary.main",
+                          color: "white",
+                          fontSize: "0.875rem",
+                          maxWidth: 300,
+                          "& .MuiTooltip-arrow": {
+                            color: "primary.main",
+                          },
+                        },
+                      },
                     }}
-                  />
+                  >
+                    <Chip
+                      label={`Version ${vh.version}`}
+                      color="primary"
+                      variant="outlined"
+                      sx={{ cursor: "help" }}
+                    />
+                  </MuiTooltip>
                 </Box>
 
                 {/* Individual Histogram */}
@@ -648,32 +765,34 @@ const MetricsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_latency",
-      title: "Inference",
+      title: "Analysis Speed",
+      description:
+        "How fast our AI analyzes the sentiment of news articles after we crawl them. 'Articles Analyzed' shows how many articles we've processed. 'Average Time' shows how long sentiment analysis typically takes per article. Faster analysis means quicker updates to the website.",
       layout: "horizontal",
       values: [
         {
           field: "count",
-          label: "Requests",
+          label: "Articles Analyzed",
           formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.primary.main,
           isPrimary: true,
         },
         {
           field: "avg_value",
-          label: "Average",
+          label: "Average Time",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.primary.main,
           isPrimary: false,
         },
         {
           field: "min_value",
-          label: "Min",
+          label: "Fastest",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.success.dark,
         },
         {
           field: "max_value",
-          label: "Max",
+          label: "Slowest",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.error.main,
         },
@@ -682,32 +801,34 @@ const MetricsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_loading_latency",
-      title: "Loading Latency",
+      title: "AI Model Startup",
+      description:
+        "How long it takes for our sentiment analysis AI to load and become ready to process articles. This happens during system startup and when the model has been idle for more than 5 minutes (we unload it to save memory costs). Shorter startup times mean less delay when new articles need analysis.",
       layout: "horizontal",
       values: [
         {
           field: "count",
-          label: "Count",
+          label: "Model Startups Count",
           formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.primary.main,
           isPrimary: true,
         },
         {
           field: "avg_value",
-          label: "Average",
+          label: "Average Time",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.primary.main,
           isPrimary: false,
         },
         {
           field: "min_value",
-          label: "Min",
+          label: "Fastest",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.success.dark,
         },
         {
           field: "max_value",
-          label: "Max",
+          label: "Slowest",
           formatValue: (value) => `${value.toFixed(2)}s`,
           color: theme.palette.error.main,
         },
@@ -716,12 +837,14 @@ const MetricsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_error",
-      title: "Inference Errors",
+      title: "Analysis Failures",
+      description:
+        "How many news articles couldn't be analyzed for sentiment. This could happen if an article has unusual formatting, is in an unsupported language, or if there's a technical issue. Lower numbers mean more articles get proper sentiment tags for users.",
       layout: "horizontal",
       values: [
         {
           field: "count",
-          label: "Count",
+          label: "Failed Articles",
           formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.error.main,
           isPrimary: true,
@@ -731,7 +854,9 @@ const MetricsPage = () => {
     {
       type: "single_value",
       metricName: "predictor_loading_error",
-      title: "Loading Errors",
+      title: "Model Loading Issues",
+      description:
+        "How many times our sentiment analysis model failed to start up properly. When this happens, new articles can't get sentiment analysis until the issue is fixed. We monitor this closely to ensure continuous article processing.",
       layout: "horizontal",
       values: [
         {
@@ -746,9 +871,11 @@ const MetricsPage = () => {
     {
       type: "histogram",
       metricName: "predictor_latency",
-      title: "Predictor Latency Distribution",
+      title: "Article Analysis Time Distribution",
+      description:
+        "Shows how consistent our sentiment analysis speed is across different articles. Each bar represents a time range, and the height shows how many articles took that long to analyze. Most articles should process quickly and consistently.",
       yAxisLabel: "Count",
-      barName: "Predictor latency",
+      barName: "Analysis time",
       numBins: 10,
       formatBinLabel: (bin) =>
         `${bin.bin_start.toFixed(2)}s - ${bin.bin_end.toFixed(2)}s`,
@@ -757,23 +884,14 @@ const MetricsPage = () => {
     {
       type: "histogram",
       metricName: "predictor_loading_latency",
-      title: "Predictor Loading Latency Distribution",
+      title: "Model Startup Time Distribution",
+      description:
+        "Shows how long our sentiment analysis model takes to start up across different occasions. Each bar represents a time range. Consistent, fast startup times ensure minimal delays when processing newly crawled articles.",
       yAxisLabel: "Count",
-      barName: "Predictor loading latency",
+      barName: "Model startup time",
       numBins: 10,
       formatBinLabel: (bin) =>
         `${bin.bin_start.toFixed(2)}s - ${bin.bin_end.toFixed(2)}s`,
-      color: theme.palette.primary.main,
-    },
-    {
-      type: "histogram",
-      metricName: "predictor_price",
-      title: "Predictor Price Per Call Distribution",
-      yAxisLabel: "Count",
-      barName: "Predictor price per call",
-      numBins: 10,
-      formatBinLabel: (bin) =>
-        `${bin.bin_start.toFixed(2)}$ - ${bin.bin_end.toFixed(2)}$`,
       color: theme.palette.primary.main,
     },
   ];
@@ -910,6 +1028,16 @@ const MetricsPage = () => {
             </Box>
           )}
         </DashboardCard>
+
+        {/* Overview */}
+        {selectedPredictionType && availableVersions.length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <PredictorTrafficSummary
+              availableVersions={availableVersions}
+              selectedPredictionType={selectedPredictionType}
+            />
+          </Box>
+        )}
         {/* Render metrics only when filters are selected */}
         {shouldRenderMetrics ? (
           <Box sx={{ mt: 3 }}>

@@ -13,6 +13,7 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import { Stack } from "@mui/system";
 import { Button } from "@mui/material";
@@ -303,14 +304,69 @@ const Blog = () => {
                     {/* Sentiment Badge - moved to top of card content */}
                     {sentimentProps && (
                       <Box sx={{ mb: 2 }}>
-                        <Chip
-                          label={sentimentProps.label}
-                          color={sentimentProps.color}
-                          size="small"
-                          sx={{
-                            ...sentimentProps.sx, // Spread the custom sx styles
+                        <Tooltip
+                          title={
+                            <Box>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: 600, mb: 1 }}
+                              >
+                                Sentiment Classification
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 1 }}>
+                                • <strong>Positive:</strong> Articles with
+                                optimistic, encouraging, or favorable content
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 1 }}>
+                                • <strong>Negative:</strong> Articles with
+                                pessimistic, concerning, or unfavorable content
+                              </Typography>
+                              <Typography variant="body2" sx={{ mb: 1 }}>
+                                • <strong>Neutral:</strong> Articles with
+                                balanced, factual, or objective content
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{ mt: 1, fontStyle: "italic" }}
+                              >
+                                This classification uses AI algorithms to
+                                predict sentiment based on words in the title
+                                and description. As this is a prediction, it may
+                                contain errors.
+                              </Typography>
+                            </Box>
+                          }
+                          arrow
+                          placement="top"
+                          slotProps={{
+                            tooltip: {
+                              sx: {
+                                backgroundColor: "primary.main",
+                                color: "white",
+                                fontSize: "0.875rem",
+                                maxWidth: 300,
+                                "& .MuiTooltip-arrow": {
+                                  color: "primary.main",
+                                },
+                              },
+                            },
                           }}
-                        />
+                        >
+                          <Chip
+                            label={sentimentProps.label}
+                            color={sentimentProps.color}
+                            size="small"
+                            sx={{
+                              ...sentimentProps.sx,
+                              cursor: "help",
+                              transition: "all 0.2s ease-in-out",
+                              "&:hover": {
+                                transform: "scale(1.05)",
+                                boxShadow: "0 0 8px rgba(0,0,0,0.3)",
+                              },
+                            }}
+                          />
+                        </Tooltip>
                       </Box>
                     )}
 

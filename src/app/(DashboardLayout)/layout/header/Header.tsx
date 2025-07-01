@@ -12,7 +12,13 @@ import {
   Typography,
   alpha,
 } from "@mui/material";
-import { IconMenu, IconSun, IconMoon, IconGlobe } from "@tabler/icons-react";
+import {
+  IconMenu,
+  IconSun,
+  IconMoon,
+  IconGlobe,
+  IconHelp,
+} from "@tabler/icons-react";
 import { useThemeContext } from "@/contexts/ThemeContext";
 
 interface ItemType {
@@ -145,6 +151,64 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
         </SloganContainer>
 
         <ControlsContainer>
+          <Tooltip
+            title={
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  How to Use This Application
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  📰 <strong>News Articles:</strong> Browse the latest news with
+                  AI-powered sentiment analysis
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  😊😐😞 <strong>Sentiment Badges:</strong> Hover over sentiment
+                  chips on articles for detailed explanations
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  🔍 <strong>Filters:</strong> Use the filter panel to sort by
+                  sentiment or other criteria
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  📊 <strong>Metrics:</strong> View detailed analytics and
+                  performance data in the metrics section
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
+                  All sentiment classifications are AI predictions and may
+                  contain errors.
+                </Typography>
+              </Box>
+            }
+            arrow
+            placement="bottom-end"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  maxWidth: 300,
+                  "& .MuiTooltip-arrow": {
+                    color: "primary.main",
+                  },
+                },
+              },
+            }}
+          >
+            <IconButton
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                "&:hover": {
+                  color: theme.palette.primary.main,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                },
+                transition: "all 0.2s ease-in-out",
+              }}
+            >
+              <IconHelp size={18} />
+            </IconButton>
+          </Tooltip>
           <Tooltip
             title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >

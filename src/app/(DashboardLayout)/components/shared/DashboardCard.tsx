@@ -1,9 +1,18 @@
 import React from "react";
-import { Card, CardContent, Typography, Stack, Box } from "@mui/material";
+import {
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  Box,
+  Tooltip,
+  IconButton,
+} from "@mui/material";
 
 type Props = {
   title?: string;
   subtitle?: string;
+  description?: string;
   action?: React.ReactNode | any;
   footer?: React.ReactNode;
   cardheading?: string | React.ReactNode;
@@ -16,6 +25,7 @@ type Props = {
 const DashboardCard = ({
   title,
   subtitle,
+  description,
   children,
   action,
   footer,
@@ -25,7 +35,53 @@ const DashboardCard = ({
   middlecontent,
 }: Props) => {
   return (
-    <Card sx={{ padding: 0 }} elevation={9} variant={undefined}>
+    <Card
+      sx={{ padding: 0, position: "relative" }}
+      elevation={9}
+      variant={undefined}
+    >
+      {/* Help tooltip in top-right corner */}
+      {description && (
+        <Tooltip
+          title={description}
+          arrow
+          placement="top"
+          slotProps={{
+            tooltip: {
+              sx: {
+                backgroundColor: "primary.main",
+                color: "white",
+                fontSize: "0.875rem",
+                maxWidth: 300,
+                "& .MuiTooltip-arrow": {
+                  color: "primary.main",
+                },
+              },
+            },
+          }}
+        >
+          <IconButton
+            size="small"
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              zIndex: 1,
+              width: 20,
+              height: 20,
+              backgroundColor: "action.hover",
+              fontSize: "12px",
+              "&:hover": {
+                backgroundColor: "primary.main",
+                color: "primary.contrastText",
+              },
+            }}
+          >
+            ?
+          </IconButton>
+        </Tooltip>
+      )}
+
       {cardheading ? (
         <CardContent>
           <Typography variant="h5">{headtitle}</Typography>
