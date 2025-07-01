@@ -1,5 +1,15 @@
 "use client";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Chip,
+  Typography,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Checkbox, ListItemText } from "@mui/material";
 import { useState, useEffect } from "react";
 import {
   Box,
@@ -18,7 +28,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
@@ -34,12 +43,6 @@ interface MetricBin {
 
 interface MetricBinsResponse {
   metric_bins: MetricBin[];
-}
-
-interface ChartData {
-  name: string;
-  count: number;
-  binIndex: number;
 }
 
 interface HistogramConfig {
@@ -67,6 +70,7 @@ interface SingleValueConfig {
     defaultValue?: number | null;
   }[];
   layout?: "horizontal" | "vertical";
+  showAsTable?: boolean;
 }
 
 type MetricConfig = HistogramConfig | SingleValueConfig;
@@ -83,22 +87,41 @@ interface PredictionTypesResponse {
   prediction_types: string[];
 }
 
-interface PredictorVersionsResponse {
-  predictor_versions: string[];
-}
-
 interface HistogramProps {
   config: HistogramConfig;
   selectedDays: number;
   selectedPredictionType: string;
-  selectedVersion: string;
+  selectedVersions: number[];
+  availableVersions: PredictorDocument[];
 }
 
 interface SingleValueProps {
   config: SingleValueConfig;
   selectedDays: number;
   selectedPredictionType: string;
-  selectedVersion: string;
+  selectedVersions: number[];
+  availableVersions: PredictorDocument[];
+}
+
+interface PredictorDocument {
+  _id: { $oid: string };
+  prediction_type: string;
+  predictor_version: number;
+  predictor_description: string;
+  traffic_percentage: number;
+  created_at: { $date: { $numberLong: string } };
+  updated_at: { $date: { $numberLong: string } };
+}
+
+interface PredictorsResponse {
+  prediction_type: string;
+  predictors: PredictorDocument[];
+}
+
+interface VersionMetricData {
+  version: number;
+  aggregation: MetricSummaryAggregation;
+  traffic_percentage: number;
 }
 
 // Single Value Metric Component
@@ -106,75 +129,89 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
   config,
   selectedDays,
   selectedPredictionType,
-  selectedVersion,
+  selectedVersions,
+  availableVersions,
 }) => {
   const theme = useTheme();
-  const [aggregation, setAggregation] =
-    useState<MetricSummaryAggregation | null>(null);
+  const [versionData, setVersionData] = useState<VersionMetricData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAggregation = async () => {
+  const fetchVersionsData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = {
-        metric_name: config.metricName,
-        num_days: selectedDays.toString(),
-        prediction_type: selectedPredictionType,
-        predictor_version: selectedVersion,
-      };
-
-      const response = await fetch(
-        buildApiUrl(
-          ENDPOINTS.METRICS_SUMMARY || ENDPOINTS.METRICS_BINS,
-          params,
-        ),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          mode: "cors",
-        },
-      );
-
-      if (response.status === 404) {
-        const defaultAggregation: MetricSummaryAggregation = {
-          avg_value: 0,
-          sum_value: 0,
-          count: 0,
-          min_value: 0,
-          max_value: 0,
+      // Fetch data for each selected version
+      const promises = selectedVersions.map(async (version) => {
+        const params = {
+          metric_name: config.metricName,
+          num_days: selectedDays.toString(),
+          prediction_type: selectedPredictionType,
+          predictor_version: version.toString(),
         };
-        setAggregation(defaultAggregation);
-        return;
-      }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        const response = await fetch(
+          buildApiUrl(ENDPOINTS.METRICS_SUMMARY, params),
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            mode: "cors",
+          },
+        );
 
-      const data: MetricSummaryAggregation = await response.json();
-      setAggregation(data);
+        if (response.status === 404) {
+          return {
+            version,
+            aggregation: {
+              avg_value: 0,
+              sum_value: 0,
+              count: 0,
+              min_value: 0,
+              max_value: 0,
+            },
+            traffic_percentage: 0,
+          };
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: MetricSummaryAggregation = await response.json();
+
+        // Get traffic percentage from availableVersions
+        const predictor = availableVersions.find(
+          (p) => p.predictor_version === version,
+        );
+
+        return {
+          version,
+          aggregation: data,
+          traffic_percentage: predictor?.traffic_percentage || 0,
+        };
+      });
+
+      const results = await Promise.all(promises);
+      setVersionData(results);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : `Failed to fetch ${config.title}`,
-      );
-      console.error(`Error fetching ${config.title}:`, err);
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAggregation();
+    if (selectedVersions.length > 0) {
+      fetchVersionsData();
+    }
   }, [
-    selectedPredictionType,
+    selectedVersions,
     selectedDays,
-    selectedVersion,
+    selectedPredictionType,
     config.metricName,
   ]);
 
@@ -199,173 +236,91 @@ const SingleValueMetric: React.FC<SingleValueProps> = ({
       : displayValue.toLocaleString();
   };
 
-  const renderValues = () => {
-    if (!aggregation) return null;
-
-    const primaryValue = config.values.find((v) => v.isPrimary);
-    const secondaryValues = config.values.filter((v) => !v.isPrimary);
-    const isVertical = config.layout === "vertical";
-
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: isVertical ? "column" : "row",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: isVertical ? 2 : 3,
-          minHeight: "120px",
-          textAlign: "center",
-          width: "100%",
-        }}
-      >
-        {/* Primary Value (if specified) */}
-        {primaryValue && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              flex: isVertical ? "none" : 1,
-            }}
-          >
-            <Box
-              sx={{
-                fontSize: isVertical ? "2.5rem" : "2rem",
-                fontWeight: "bold",
-                color: primaryValue.color || theme.palette.primary.main,
-                lineHeight: 1,
-              }}
-            >
-              {formatDisplayValue(
-                aggregation[primaryValue.field],
-                primaryValue,
-              )}
-            </Box>
-            <Box
-              sx={{
-                fontSize: "0.875rem",
-                color: theme.palette.text.secondary,
-                mt: 0.5,
-                fontWeight: 500,
-              }}
-            >
-              {primaryValue.label}
-            </Box>
-          </Box>
-        )}
-
-        {/* Secondary Values */}
-        {secondaryValues.length > 0 && (
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: isVertical ? "row" : "column",
-              gap: isVertical ? 2 : 1,
-              flex: isVertical ? "none" : 1,
-              justifyContent: "center",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            {secondaryValues.map((valueConfig, index) => (
-              <Box
-                key={index}
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  minWidth: isVertical ? "80px" : "auto",
-                }}
-              >
-                <Box
-                  sx={{
-                    fontSize: primaryValue ? "1.25rem" : "2rem",
-                    fontWeight: primaryValue ? "600" : "bold",
-                    color: valueConfig.color || theme.palette.text.primary,
-                    lineHeight: 1,
-                  }}
-                >
-                  {formatDisplayValue(
-                    aggregation[valueConfig.field],
-                    valueConfig,
-                  )}
-                </Box>
-                <Box
-                  sx={{
-                    fontSize: "0.75rem",
-                    color: theme.palette.text.secondary,
-                    mt: 0.25,
-                    textAlign: "center",
-                  }}
-                >
-                  {valueConfig.label}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
-
-        {/* If no primary value, display all values equally */}
-        {!primaryValue &&
-          config.values.map((valueConfig, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                flex: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  fontSize: config.values.length === 1 ? "2.5rem" : "1.5rem",
-                  fontWeight: "bold",
-                  color: valueConfig.color || theme.palette.primary.main,
-                  lineHeight: 1,
-                }}
-              >
-                {formatDisplayValue(
-                  aggregation[valueConfig.field],
-                  valueConfig,
-                )}
-              </Box>
-              <Box
-                sx={{
-                  fontSize: "0.75rem",
-                  color: theme.palette.text.secondary,
-                  mt: 0.5,
-                  textAlign: "center",
-                }}
-              >
-                {valueConfig.label}
-              </Box>
-            </Box>
-          ))}
-      </Box>
-    );
-  };
-
   return (
-    <DashboardCard title={`${config.title}`}>
-      {loading ? (
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="120px"
-        >
-          <CircularProgress size={40} />
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          Error loading {config.title.toLowerCase()}: {error}
-        </Alert>
-      ) : (
-        renderValues()
-      )}
-    </DashboardCard>
+    <Box>
+      <DashboardCard title={config.title}>
+        {loading ? (
+          <Box display="flex" justifyContent="center" p={3}>
+            <CircularProgress size={30} />
+          </Box>
+        ) : error ? (
+          <Alert severity="error" sx={{ m: 2 }}>
+            {error}
+          </Alert>
+        ) : versionData.length === 0 ? (
+          <Box p={3}>
+            <Typography variant="body2" color="text.secondary">
+              No data available
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ p: 2 }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>
+                    <strong>Version</strong>
+                  </TableCell>
+                  <TableCell>
+                    <strong>Traffic %</strong>
+                  </TableCell>
+                  {config.values.map((value) => (
+                    <TableCell key={value.field} align="right">
+                      <strong>{value.label}</strong>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {versionData.map((data) => (
+                  <TableRow key={data.version}>
+                    <TableCell>
+                      <Chip
+                        label={`V${data.version}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={`${data.traffic_percentage}%`}
+                        size="small"
+                        color={
+                          data.traffic_percentage > 0 ? "success" : "default"
+                        }
+                      />
+                    </TableCell>
+                    {config.values.map((value) => {
+                      const rawValue = data.aggregation[value.field];
+                      const formattedValue = value.formatValue
+                        ? value.formatValue(rawValue)
+                        : rawValue.toString();
+
+                      return (
+                        <TableCell key={value.field} align="right">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: value.isPrimary ? "bold" : "normal",
+                              color: value.isPrimary
+                                ? "primary.main"
+                                : "text.primary",
+                            }}
+                          >
+                            {formattedValue}
+                          </Typography>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
+      </DashboardCard>
+    </Box>
   );
 };
 
@@ -373,136 +328,176 @@ const MetricHistogram: React.FC<HistogramProps> = ({
   config,
   selectedDays,
   selectedPredictionType,
-  selectedVersion,
+  selectedVersions,
+  availableVersions,
 }) => {
   const theme = useTheme();
-  const [histogramData, setHistogramData] = useState<ChartData[]>([]);
+  const [versionHistograms, setVersionHistograms] = useState<
+    {
+      version: number;
+      bins: MetricBin[];
+      traffic_percentage: number;
+    }[]
+  >([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHistogramData = async () => {
+  const fetchHistogramsData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = {
-        metric_name: config.metricName,
-        num_bins: config.numBins.toString(),
-        num_days: selectedDays.toString(),
-        prediction_type: selectedPredictionType,
-        predictor_version: selectedVersion,
-      };
+      const promises = selectedVersions.map(async (version) => {
+        const params = {
+          metric_name: config.metricName,
+          num_days: selectedDays.toString(),
+          prediction_type: selectedPredictionType,
+          predictor_version: version.toString(),
+          num_bins: config.numBins.toString(),
+        };
 
-      const response = await fetch(
-        buildApiUrl(ENDPOINTS.METRICS_BINS, params),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
+        const response = await fetch(
+          buildApiUrl(ENDPOINTS.METRICS_BINS, params),
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            mode: "cors",
           },
-          mode: "cors",
-        },
-      );
+        );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        if (response.status === 404) {
+          return {
+            version,
+            bins: [],
+            traffic_percentage: 0,
+          };
+        }
 
-      const data: MetricBinsResponse = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      const chartData: ChartData[] = data.metric_bins.map((bin) => ({
-        name: config.formatBinLabel
-          ? config.formatBinLabel(bin)
-          : `${bin.bin_start} - ${bin.bin_end}`,
-        count: bin.count,
-        binIndex: bin.bin_index,
-      }));
+        const data: MetricBinsResponse = await response.json();
+        const predictor = availableVersions.find(
+          (p) => p.predictor_version === version,
+        );
 
-      setHistogramData(chartData);
+        return {
+          version,
+          bins: data.metric_bins,
+          traffic_percentage: predictor?.traffic_percentage || 0,
+        };
+      });
+
+      const results = await Promise.all(promises);
+      setVersionHistograms(results);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : `Failed to fetch ${config.title} data`,
-      );
-      console.error(`Error fetching ${config.title} data:`, err);
+      setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHistogramData();
+    fetchHistogramsData();
   }, [
     selectedPredictionType,
     selectedDays,
-    selectedVersion,
+    selectedVersions,
     config.metricName,
   ]);
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <DashboardCard title={`${config.title}`}>
+    <Box>
+      <DashboardCard title={config.title}>
         {loading ? (
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="400px"
-          >
-            <CircularProgress />
+          <Box display="flex" justifyContent="center" p={3}>
+            <CircularProgress size={30} />
           </Box>
         ) : error ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Error loading {config.title.toLowerCase()}: {error}
+          <Alert severity="error" sx={{ m: 2 }}>
+            {error}
           </Alert>
+        ) : versionHistograms.length === 0 ? (
+          <Box p={3}>
+            <Typography variant="body2" color="text.secondary">
+              No data available
+            </Typography>
+          </Box>
         ) : (
-          <Box sx={{ width: "100%", height: 400, mt: 2 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={histogramData}
-                margin={{
-                  top: 20,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
+          <Box sx={{ p: 2 }}>
+            {versionHistograms.map((vh, index) => (
+              <Box
+                key={vh.version}
+                sx={{ mb: index < versionHistograms.length - 1 ? 3 : 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  interval={0}
-                />
-                <YAxis
-                  label={{
-                    value: config.yAxisLabel,
-                    angle: -90,
-                    position: "insideLeft",
-                  }}
-                  tick={{ fontSize: 12 }}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  formatter={(value, _name) => [value, "Count"]}
-                  labelFormatter={(label) => {
-                    const item = histogramData.find((d) => d.name === label);
-                    return item ? `Bin ${item.binIndex + 1}: ${label}` : label;
-                  }}
-                />
-                <Legend />
-                <Bar
-                  dataKey="count"
-                  fill={config.color || theme.palette.primary.main}
-                  name={config.barName}
-                  radius={[2, 2, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+                {/* Version Header */}
+                <Box
+                  sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}
+                >
+                  <Chip
+                    label={`Version ${vh.version}`}
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`${vh.traffic_percentage}% traffic`}
+                    size="small"
+                    color={vh.traffic_percentage > 0 ? "success" : "default"}
+                  />
+                </Box>
+
+                {/* Individual Histogram */}
+                <Box sx={{ height: 250 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={vh.bins.map((bin) => ({
+                        name: config.formatBinLabel
+                          ? config.formatBinLabel(bin)
+                          : `Bin ${bin.bin_index + 1}`,
+                        count: bin.count,
+                        binIndex: bin.bin_index,
+                      }))}
+                      margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 11 }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis
+                        label={{
+                          value: config.yAxisLabel,
+                          angle: -90,
+                          position: "insideLeft",
+                        }}
+                      />
+                      <Tooltip
+                        formatter={(value, name) => [value, config.barName]}
+                        labelFormatter={(label, payload) => {
+                          const item = payload?.[0]?.payload;
+                          return item && config.formatBinLabel
+                            ? config.formatBinLabel(vh.bins[item.binIndex])
+                            : label;
+                        }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        fill={config.color || theme.palette.primary.main}
+                        name={config.barName}
+                        radius={[2, 2, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Box>
+            ))}
           </Box>
         )}
       </DashboardCard>
@@ -515,14 +510,19 @@ const MetricsPage = () => {
   const theme = useTheme();
   const [selectedPredictionType, setSelectedPredictionType] =
     useState<string>("");
-  const [selectedVersion, setSelectedVersion] = useState<string>("");
   const [selectedDays, setSelectedDays] = useState<number>(14);
 
   // State for dynamic options
   const [predictionTypes, setPredictionTypes] = useState<string[]>([]);
-  const [versions, setVersions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState<boolean>(true);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+  const [selectedVersions, setSelectedVersions] = useState<number[]>([]);
+  const [availableVersions, setAvailableVersions] = useState<
+    PredictorDocument[]
+  >([]);
+
+  const [showActiveOnly, setShowActiveOnly] = useState<boolean>(true);
+  const [predictors, setPredictors] = useState<PredictorDocument[]>([]);
 
   // Fetch prediction types
   const fetchPredictionTypes = async () => {
@@ -556,34 +556,37 @@ const MetricsPage = () => {
   };
 
   // Fetch versions for selected prediction type
-  const fetchVersions = async (predictionType: string) => {
+  const fetchPredictors = async (predictionType: string) => {
     if (!predictionType) return;
 
     try {
-      const params = { prediction_type: predictionType };
-      const response = await fetch(
-        buildApiUrl(ENDPOINTS.PREDICTOR_VERSION, params),
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          mode: "cors",
+      const params: Record<string, string | number | boolean> = {
+        prediction_type: predictionType,
+      };
+
+      if (showActiveOnly) {
+        params.min_traffic = 1;
+      }
+
+      const response = await fetch(buildApiUrl(ENDPOINTS.PREDICTORS, params), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-      );
+        mode: "cors",
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: PredictorVersionsResponse = await response.json();
-      setVersions(data.predictor_versions);
+      const data: PredictorsResponse = await response.json();
+      setPredictors(data.predictors);
+      setAvailableVersions(data.predictors);
 
-      // Set default version selection if available
-      if (data.predictor_versions.length > 0 && !selectedVersion) {
-        setSelectedVersion(data.predictor_versions[0]);
-      }
+      const allVersions = data.predictors.map((p) => p.predictor_version);
+      setSelectedVersions(allVersions);
     } catch (err) {
       setOptionsError(
         err instanceof Error ? err.message : "Failed to fetch versions",
@@ -608,24 +611,24 @@ const MetricsPage = () => {
   // Fetch versions when prediction type changes
   useEffect(() => {
     if (selectedPredictionType) {
-      fetchVersions(selectedPredictionType);
+      fetchPredictors(selectedPredictionType);
     } else {
-      setVersions([]);
-      setSelectedVersion("");
+      setAvailableVersions([]);
+      setSelectedVersions([]);
     }
-  }, [selectedPredictionType]);
+  }, [selectedPredictionType, showActiveOnly]);
 
   const handlePredictionTypeChange = (event: SelectChangeEvent<string>) => {
     const newPredictionType = event.target.value;
     setSelectedPredictionType(newPredictionType);
-    // Reset version selection when prediction type changes
-    setSelectedVersion("");
+    setSelectedVersions([]);
+    setAvailableVersions([]);
   };
 
-  const handleVersionChange = (event: SelectChangeEvent<string>) => {
-    setSelectedVersion(event.target.value);
+  const handleVersionsChange = (event: SelectChangeEvent<number[]>) => {
+    const value = event.target.value as number[];
+    setSelectedVersions(value);
   };
-
   const handleDaysChange = (event: SelectChangeEvent<string>) => {
     setSelectedDays(parseInt(event.target.value));
   };
@@ -673,7 +676,7 @@ const MetricsPage = () => {
       values: [
         {
           field: "count",
-          label: "Loading count",
+          label: "Count",
           formatValue: (value) => `${value.toFixed(0)}`,
           color: theme.palette.primary.main,
           isPrimary: true,
@@ -765,7 +768,8 @@ const MetricsPage = () => {
   ];
 
   // Don't render metrics until we have the required filters selected
-  const shouldRenderMetrics = selectedPredictionType && selectedVersion;
+  const shouldRenderMetrics =
+    selectedPredictionType && selectedVersions.length > 0;
 
   return (
     <PageContainer
@@ -813,19 +817,39 @@ const MetricsPage = () => {
                 </FormControl>
               </Box>
 
-              <Box sx={{ minWidth: 150 }}>
+              <Box sx={{ minWidth: 200 }}>
                 <FormControl fullWidth disabled={!selectedPredictionType}>
-                  <InputLabel id="version-label">Version</InputLabel>
+                  <InputLabel id="versions-label">Versions</InputLabel>
                   <Select
-                    labelId="version-label"
-                    id="version-select"
-                    value={selectedVersion}
-                    label="Version"
-                    onChange={handleVersionChange}
+                    labelId="versions-label"
+                    id="versions-select"
+                    multiple
+                    value={selectedVersions}
+                    label="Versions"
+                    onChange={(event) => {
+                      const value = event.target.value as number[];
+                      setSelectedVersions(value);
+                    }}
+                    renderValue={(selected) =>
+                      selected.length === availableVersions.length
+                        ? "All Versions"
+                        : `${selected.length} selected`
+                    }
                   >
-                    {versions.map((version) => (
-                      <MenuItem key={version} value={version}>
-                        {version}
+                    {availableVersions.map((predictor) => (
+                      <MenuItem
+                        key={predictor.predictor_version}
+                        value={predictor.predictor_version}
+                      >
+                        <Checkbox
+                          checked={selectedVersions.includes(
+                            predictor.predictor_version,
+                          )}
+                        />
+                        <ListItemText
+                          primary={`Version ${predictor.predictor_version}`}
+                          secondary={`Traffic: ${predictor.traffic_percentage}%`}
+                        />
                       </MenuItem>
                     ))}
                   </Select>
@@ -850,10 +874,31 @@ const MetricsPage = () => {
                   </Select>
                 </FormControl>
               </Box>
+
+              <Box sx={{ minWidth: 150 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="active-filter-label">
+                    Show Predictors
+                  </InputLabel>
+                  <Select
+                    labelId="active-filter-label"
+                    id="active-filter-select"
+                    value={showActiveOnly ? "active" : "all"}
+                    label="Show Predictors"
+                    onChange={(event) =>
+                      setShowActiveOnly(event.target.value === "active")
+                    }
+                  >
+                    <MenuItem value="active">
+                      Active Only (Traffic ≥ 1%)
+                    </MenuItem>
+                    <MenuItem value="all">All Predictors</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
           )}
         </DashboardCard>
-
         {/* Render metrics only when filters are selected */}
         {shouldRenderMetrics ? (
           <Box sx={{ mt: 3 }}>
@@ -861,11 +906,9 @@ const MetricsPage = () => {
               sx={{
                 display: "grid",
                 gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "1fr",
-                  md: "1fr 1fr",
-                  lg: "repeat(3, 1fr)", // 3 columns on large screens
-                  xl: "repeat(4, 1fr)", // 4 columns on extra large screens
+                  xs: "1fr", // 1 column on mobile
+                  sm: "1fr", // 1 column on small screens
+                  md: "repeat(2, 1fr)", // 2 columns on medium and up
                 },
                 gap: 3,
               }}
@@ -873,25 +916,14 @@ const MetricsPage = () => {
               {metricConfigs.map((config, index) => {
                 if (config.type === "histogram") {
                   return (
-                    <Box
+                    <MetricHistogram
                       key={`${config.metricName}-${index}`}
-                      sx={{
-                        gridColumn: {
-                          xs: "span 1",
-                          sm: "span 1",
-                          md: "span 2",
-                          lg: "span 2",
-                          xl: "span 2",
-                        },
-                      }}
-                    >
-                      <MetricHistogram
-                        config={config}
-                        selectedDays={selectedDays}
-                        selectedPredictionType={selectedPredictionType}
-                        selectedVersion={selectedVersion}
-                      />
-                    </Box>
+                      config={config}
+                      selectedDays={selectedDays}
+                      selectedPredictionType={selectedPredictionType}
+                      selectedVersions={selectedVersions}
+                      availableVersions={availableVersions}
+                    />
                   );
                 } else {
                   return (
@@ -900,7 +932,8 @@ const MetricsPage = () => {
                       config={config}
                       selectedDays={selectedDays}
                       selectedPredictionType={selectedPredictionType}
-                      selectedVersion={selectedVersion}
+                      selectedVersions={selectedVersions}
+                      availableVersions={availableVersions}
                     />
                   );
                 }
@@ -912,7 +945,7 @@ const MetricsPage = () => {
           !optionsError && (
             <Box sx={{ mt: 3 }}>
               <Alert severity="info">
-                Please select both a prediction type and version to view
+                Please select both a prediction type and versions to view
                 metrics.
               </Alert>
             </Box>

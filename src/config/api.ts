@@ -43,6 +43,7 @@ export const API_CONFIG = {
     ARTICLES: "/articles",
     METRICS_SUMMARY: "/metrics/summary",
     METRICS_BINS: "/metrics/bins",
+    PREDICTORS: "/predictors",
     PREDICTOR_TYPES: "/predictors/types",
     PREDICTOR_VERSION: "/predictors/versions",
   },
@@ -50,7 +51,7 @@ export const API_CONFIG = {
 
 export const buildApiUrl = (
   endpoint: string,
-  params?: Record<string, string | number>,
+  params?: Record<string, string | number | boolean>,
 ): string => {
   const url = new URL(endpoint, API_CONFIG.BASE_URL);
 
