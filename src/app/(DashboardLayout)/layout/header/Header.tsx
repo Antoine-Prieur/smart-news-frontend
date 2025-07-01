@@ -18,6 +18,7 @@ import {
   IconMoon,
   IconGlobe,
   IconHelp,
+  IconBrandGithub,
 } from "@tabler/icons-react";
 import { useThemeContext } from "@/contexts/ThemeContext";
 
@@ -119,6 +120,14 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
     },
   }));
 
+  const handleGitHubClick = () => {
+    window.open(
+      "https://github.com/Antoine-Prieur/smart-news-ml",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
   return (
     <AppBarStyled position="sticky" color="default">
       <ToolbarStyled>
@@ -209,8 +218,53 @@ const Header = ({ toggleMobileSidebar }: ItemType) => {
               <IconHelp size={18} />
             </IconButton>
           </Tooltip>
+
+          <Tooltip
+            title="View on GitHub"
+            slotProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  maxWidth: 300,
+                  "& .MuiTooltip-arrow": {
+                    color: "primary.main",
+                  },
+                },
+              },
+            }}
+          >
+            <IconButton
+              onClick={handleGitHubClick}
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                "&:hover": {
+                  color: theme.palette.text.primary,
+                  backgroundColor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <IconBrandGithub size={18} />
+            </IconButton>
+          </Tooltip>
+
           <Tooltip
             title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            slotProps={{
+              tooltip: {
+                sx: {
+                  backgroundColor: "primary.main",
+                  color: "white",
+                  fontSize: "0.875rem",
+                  maxWidth: 300,
+                  "& .MuiTooltip-arrow": {
+                    color: "primary.main",
+                  },
+                },
+              },
+            }}
           >
             <FormControlLabel
               control={

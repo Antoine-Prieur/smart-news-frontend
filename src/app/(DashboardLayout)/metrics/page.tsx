@@ -161,6 +161,19 @@ const PredictorTrafficSummary: React.FC<{
                   `Version ${predictor.predictor_version} - No description available`
                 }
                 placement="top"
+                slotProps={{
+                  tooltip: {
+                    sx: {
+                      backgroundColor: "primary.main",
+                      color: "white",
+                      fontSize: "0.875rem",
+                      maxWidth: 300,
+                      "& .MuiTooltip-arrow": {
+                        color: "primary.main",
+                      },
+                    },
+                  },
+                }}
               >
                 <Box
                   sx={{
