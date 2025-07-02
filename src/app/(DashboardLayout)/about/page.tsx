@@ -77,7 +77,7 @@ const AboutPage = () => {
     >
       <Grid container spacing={3}>
         {/* Profile Card */}
-        <Grid xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard>
             <CardContent>
               <Box
@@ -141,7 +141,7 @@ const AboutPage = () => {
         </Grid>
 
         {/* Main Content */}
-        <Grid xs={12} md={8}>
+        <Grid size={{ xs: 12, md: 8 }}>
           <Stack spacing={3}>
             {/* About Section */}
             <DashboardCard>
