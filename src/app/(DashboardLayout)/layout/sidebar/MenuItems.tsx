@@ -1,4 +1,9 @@
-import { IconNews, IconChartHistogram, IconUser } from "@tabler/icons-react";
+import {
+  IconNews,
+  IconChartHistogram,
+  IconUser,
+  IconRocket,
+} from "@tabler/icons-react";
 import { uniqueId } from "lodash";
 
 const Menuitems = [
@@ -7,6 +12,12 @@ const Menuitems = [
     title: "News",
     icon: IconNews,
     href: "/",
+  },
+  {
+    id: uniqueId(),
+    title: "Deployments",
+    icon: IconRocket,
+    href: "/deployments",
   },
   {
     id: uniqueId(),

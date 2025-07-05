@@ -129,108 +129,6 @@ interface VersionMetricData {
   description: string;
 }
 
-const PredictorTrafficSummary: React.FC<{
-  availableVersions: PredictorDocument[];
-  selectedPredictionType: string;
-}> = ({ availableVersions, selectedPredictionType }) => {
-  const theme = useTheme();
-
-  const sortedPredictors = [...availableVersions].sort(
-    (a, b) => a.predictor_version - b.predictor_version,
-  );
-
-  return (
-    <DashboardCard
-      title={`Traffic Distribution`}
-      description="Shows the percentage of prediction requests handled by each model version. Traffic percentages should sum to 100% across all active predictors."
-    >
-      <Box sx={{ p: 2 }}>
-        <Grid container spacing={1}>
-          {sortedPredictors.map((predictor) => (
-            <Grid
-              key={predictor.predictor_version}
-              size={{
-                xs: 6,
-                sm: 4,
-                md: 3,
-              }}
-            >
-              <MuiTooltip
-                title={
-                  predictor.predictor_description ||
-                  `Version ${predictor.predictor_version} - No description available`
-                }
-                placement="top"
-                slotProps={{
-                  tooltip: {
-                    sx: {
-                      backgroundColor: "primary.main",
-                      color: "white",
-                      fontSize: "0.875rem",
-                      maxWidth: 300,
-                      "& .MuiTooltip-arrow": {
-                        color: "primary.main",
-                      },
-                    },
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    p: 1.5,
-                    border: 1,
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    backgroundColor:
-                      predictor.traffic_percentage > 0
-                        ? "action.hover"
-                        : "background.paper",
-                    cursor: "help",
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      backgroundColor:
-                        predictor.traffic_percentage > 0
-                          ? "action.selected"
-                          : "action.hover",
-                      transform: "translateY(-1px)",
-                      boxShadow: 1,
-                    },
-                  }}
-                >
-                  <Chip
-                    label={`V${predictor.predictor_version}`}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={`${predictor.traffic_percentage}%`}
-                    size="small"
-                    sx={{
-                      backgroundColor:
-                        predictor.traffic_percentage > 0
-                          ? theme.palette.success.main
-                          : theme.palette.grey[300],
-                      color:
-                        predictor.traffic_percentage > 0
-                          ? "white"
-                          : "text.secondary",
-                      fontWeight: "bold",
-                    }}
-                  />
-                </Box>
-              </MuiTooltip>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    </DashboardCard>
-  );
-};
-
 // Single Value Metric Component
 const SingleValueMetric: React.FC<SingleValueProps> = ({
   config,
@@ -1042,15 +940,6 @@ const MetricsPage = () => {
           )}
         </DashboardCard>
 
-        {/* Overview */}
-        {selectedPredictionType && availableVersions.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <PredictorTrafficSummary
-              availableVersions={availableVersions}
-              selectedPredictionType={selectedPredictionType}
-            />
-          </Box>
-        )}
         {/* Render metrics only when filters are selected */}
         {shouldRenderMetrics ? (
           <Box sx={{ mt: 3 }}>
