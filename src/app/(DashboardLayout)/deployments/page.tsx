@@ -612,14 +612,17 @@ const DeploymentsPage: React.FC = () => {
         prediction_type: predictionType,
       });
 
-      const response = await fetch(`http://localhost:8000/metrics?${params}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+      const response = await fetch(
+        buildApiUrl(ENDPOINTS.METRICS, Object.fromEntries(params)),
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          mode: "cors",
         },
-        mode: "cors",
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
