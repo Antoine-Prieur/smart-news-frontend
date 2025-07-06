@@ -22,6 +22,8 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import {
   IconRocket,
@@ -39,6 +41,7 @@ import {
   IconUsers,
   IconTrendingUp,
   IconDatabase,
+  IconPlayerPause,
 } from "@tabler/icons-react";
 import PageContainer from "@/app/(DashboardLayout)/components/container/PageContainer";
 import DashboardCard from "@/app/(DashboardLayout)/components/shared/DashboardCard";
@@ -64,10 +67,12 @@ interface PredictionTypesResponse {
   prediction_types: string[];
 }
 
+// Updated TrafficMetric interface to include optional description
 interface TrafficMetric {
   _id: { $oid: string };
   metric_name: string;
   metric_value: number;
+  description?: string; // Optional field added
   tags: {
     prediction_type: string;
     predictor_version: string;
@@ -75,6 +80,7 @@ interface TrafficMetric {
   created_at: { $date: { $numberLong: string } };
   updated_at: { $date: { $numberLong: string } };
 }
+
 interface TrafficMetricsResponse {
   metrics: TrafficMetric[];
 }
@@ -89,10 +95,11 @@ interface DeploymentVersion {
   deployedAt: string;
 }
 
+// Updated ABTestLog interface to support multiple action types
 interface ABTestLog {
   id: string;
   timestamp: string;
-  action: "traffic_update";
+  action: "traffic_update" | "traffic_deactivation";
   version: string;
   trafficValue: number;
   reason: string;
@@ -151,175 +158,74 @@ const DeploymentCard: React.FC<{ deployment: DeploymentVersion }> = ({
           }}
         >
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-              v{deployment.version}
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              Version {deployment.version}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {deployment.description}
-            </Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Chip
-                icon={getStatusIcon(deployment.status)}
-                label={deployment.status.toUpperCase()}
-                size="small"
-                sx={{
-                  backgroundColor: theme.palette.grey[100],
-                  color: getStatusColor(deployment.status),
-                  fontWeight: 600,
-                  "& .MuiChip-icon": {
-                    color: getStatusColor(deployment.status),
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-          <Box sx={{ textAlign: "right" }}>
-            <Box
-              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}
-            ></Box>
-            <Typography variant="caption" color="text.secondary">
-              {new Date(deployment.deployedAt).toLocaleDateString()}
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Action Buttons */}
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          {/* Toggle Active/Deactivate Button */}
-          {deployment.status === "active" &&
-          deployment.trafficPercentage > 0 ? (
-            <Tooltip
-              title="Set active model to 0% traffic"
-              placement="top"
-              slotProps={{
-                tooltip: {
-                  sx: {
-                    backgroundColor: "primary.main",
-                    color: "white",
-                    fontSize: "0.875rem",
-                    maxWidth: 300,
-                    "& .MuiTooltip-arrow": {
-                      color: "primary.main",
-                    },
-                  },
-                },
-              }}
-            >
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<IconX size={16} />}
-                sx={{
-                  borderColor: theme.palette.warning.main,
-                  color: theme.palette.warning.main,
-                  "&:hover": {
-                    borderColor: theme.palette.warning.dark,
-                    color: theme.palette.warning.dark,
-                    backgroundColor: theme.palette.warning.light + "20",
-                  },
-                }}
-                onClick={() => {
-                  // TODO: Implement deactivate model (any% to 0%)
-                  console.log(
-                    `Deactivating model ${deployment.version} (${deployment.trafficPercentage}% to 0%)`,
-                  );
-                }}
-              >
-                Deactivate
-              </Button>
-            </Tooltip>
-          ) : (
-            <Tooltip
-              title="Set inactive model to 5% traffic to start rolling update"
-              placement="top"
-              slotProps={{
-                tooltip: {
-                  sx: {
-                    backgroundColor: "primary.main",
-                    color: "white",
-                    fontSize: "0.875rem",
-                    maxWidth: 300,
-                    "& .MuiTooltip-arrow": {
-                      color: "primary.main",
-                    },
-                  },
-                },
-              }}
-            >
-              <Button
-                size="small"
-                variant="contained"
-                startIcon={<IconPlayerPlay size={16} />}
-                sx={{
-                  backgroundColor: theme.palette.success.dark,
-                  "&:hover": {
-                    backgroundColor: theme.palette.success.dark,
-                  },
-                }}
-                onClick={() => {
-                  // TODO: Implement activate model (0% to 5%)
-                  console.log(
-                    `Activating model ${deployment.version} (0% to 5%)`,
-                  );
-                }}
-              >
-                Activate (5%)
-              </Button>
-            </Tooltip>
-          )}
-
-          {/* Disable Model Button - Always enabled as it's a danger action */}
-          <Tooltip
-            title="Disable model and migrate all predictions to another version (Danger Zone)"
-            placement="top"
-            slotProps={{
-              tooltip: {
-                sx: {
-                  backgroundColor: "primary.main",
+            <Chip
+              icon={getStatusIcon(deployment.status)}
+              label={deployment.status.toUpperCase()}
+              size="small"
+              sx={{
+                backgroundColor: getStatusColor(deployment.status),
+                color: "white",
+                fontWeight: 600,
+                "& .MuiChip-icon": {
                   color: "white",
-                  fontSize: "0.875rem",
-                  maxWidth: 300,
-                  "& .MuiTooltip-arrow": {
-                    color: "primary.main",
-                  },
                 },
-              },
+              }}
+            />
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              color: theme.palette.primary.main,
+              fontWeight: 700,
             }}
           >
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<IconAlertTriangle size={16} />}
-              sx={{
-                borderColor: theme.palette.error.main,
-                color: theme.palette.error.main,
-                "&:hover": {
-                  borderColor: theme.palette.error.dark,
-                  color: theme.palette.error.dark,
-                  backgroundColor: theme.palette.error.light + "20",
-                },
-              }}
-              onClick={() => {
-                // TODO: Implement disable model (danger zone)
-                console.log(
-                  `Disabling model ${deployment.version} - migrating predictions`,
-                );
-              }}
-            >
-              Disable
-            </Button>
-          </Tooltip>
+            {deployment.trafficPercentage}%
+          </Typography>
         </Box>
-        {/* Expandable Details */}
+
+        <Box sx={{ mb: 2 }}>
+          <LinearProgress
+            variant="determinate"
+            value={deployment.trafficPercentage}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: theme.palette.grey[200],
+              "& .MuiLinearProgress-bar": {
+                borderRadius: 4,
+                backgroundColor: getStatusColor(deployment.status),
+              },
+            }}
+          />
+        </Box>
+
+        {/* Display description if available */}
+        {deployment.description && (
+          <Box sx={{ mb: 2 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ fontStyle: "italic" }}
+            >
+              {deployment.description}
+            </Typography>
+          </Box>
+        )}
+
         <Box
           sx={{
-            mt: 2,
-            pt: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
+          <Typography variant="body2" color="text.secondary">
+            {new Date(deployment.deployedAt).toLocaleDateString()}
+          </Typography>
           <Button
-            fullWidth
             size="small"
             onClick={() => setExpanded(!expanded)}
             endIcon={
@@ -333,27 +239,28 @@ const DeploymentCard: React.FC<{ deployment: DeploymentVersion }> = ({
           >
             {expanded ? "Hide Details" : "Show Details"}
           </Button>
-          {expanded && (
-            <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                backgroundColor: theme.palette.grey[50],
-                borderRadius: 1,
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Deployment ID: {deployment.id}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Algorithm: {deployment.algorithm}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Last Updated: {new Date(deployment.deployedAt).toLocaleString()}
-              </Typography>
-            </Box>
-          )}
         </Box>
+
+        {expanded && (
+          <Box
+            sx={{
+              mt: 2,
+              p: 2,
+              backgroundColor: theme.palette.grey[50],
+              borderRadius: 1,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Deployment ID: {deployment.id}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Algorithm: {deployment.algorithm}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Last Updated: {new Date(deployment.deployedAt).toLocaleString()}
+            </Typography>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );
@@ -366,6 +273,8 @@ const ABTestLogEntry: React.FC<{ log: ABTestLog }> = ({ log }) => {
     switch (action) {
       case "traffic_update":
         return <IconTrendingUp size={16} />;
+      case "traffic_deactivation":
+        return <IconPlayerPause size={16} />;
       default:
         return <IconActivity size={16} />;
     }
@@ -375,8 +284,21 @@ const ABTestLogEntry: React.FC<{ log: ABTestLog }> = ({ log }) => {
     switch (action) {
       case "traffic_update":
         return theme.palette.primary.main;
+      case "traffic_deactivation":
+        return theme.palette.warning.main;
       default:
         return theme.palette.grey[500];
+    }
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case "traffic_update":
+        return "TRAFFIC UPDATE";
+      case "traffic_deactivation":
+        return "TRAFFIC DEACTIVATION";
+      default:
+        return action.toUpperCase();
     }
   };
 
@@ -414,7 +336,7 @@ const ABTestLogEntry: React.FC<{ log: ABTestLog }> = ({ log }) => {
 
       <Box sx={{ flex: 1 }}>
         <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-          TRAFFIC UPDATE to {log.version}
+          {getActionLabel(log.action)} to {log.version}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
           {log.reason}
@@ -438,7 +360,7 @@ const ABTestLogEntry: React.FC<{ log: ABTestLog }> = ({ log }) => {
         <Typography
           variant="body2"
           sx={{
-            color: theme.palette.primary.main,
+            color: getActionColor(log.action),
             fontWeight: 600,
           }}
         >
@@ -464,55 +386,25 @@ const DeploymentTrafficSummary: React.FC<{
   return (
     <DashboardCard
       title="Traffic Distribution"
-      description="Real-time traffic allocation across deployed models"
+      description="Real-time traffic allocation across active deployments"
     >
-      <Box sx={{ p: 2 }}>
-        <Grid container spacing={2}>
-          {sortedDeployments.map((deployment) => (
-            <Grid key={deployment.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+      <Box sx={{ p: 3 }}>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {sortedDeployments.slice(0, 4).map((deployment, index) => (
+            <Grid key={deployment.id} size={{ xs: 6, sm: 3 }}>
               <Tooltip
-                title={`${deployment.description}`}
+                title={`Version ${deployment.version} - ${deployment.algorithm}`}
                 placement="top"
-                slotProps={{
-                  tooltip: {
-                    sx: {
-                      backgroundColor: "primary.main",
-                      color: "white",
-                      fontSize: "0.875rem",
-                      maxWidth: 300,
-                      "& .MuiTooltip-arrow": {
-                        color: "primary.main",
-                      },
-                    },
-                  },
-                }}
               >
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    p: 2,
-                    borderRadius: 2,
-                    backgroundColor: theme.palette.grey[50],
-                    border: `1px solid ${theme.palette.divider}`,
-                    cursor: "pointer",
-                    transition: "all 0.2s ease",
-                    "&:hover": {
-                      transform: "translateY(-2px)",
-                      boxShadow: theme.shadows[2],
-                      backgroundColor: theme.palette.action.hover,
-                    },
-                  }}
-                >
+                <Box sx={{ textAlign: "center", cursor: "pointer" }}>
                   <Box
                     sx={{
+                      width: 60,
+                      height: 60,
+                      margin: "0 auto",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      width: 60,
-                      height: 60,
                       borderRadius: "50%",
                       backgroundColor: theme.palette.success.dark,
                       color: "white",
@@ -600,7 +492,9 @@ const DeploymentsPage: React.FC = () => {
 
   const [abTestLogs, setAbTestLogs] = useState<ABTestLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+  const [selectedLogTab, setSelectedLogTab] = useState(0);
 
+  // Updated function to fetch traffic update logs with description support
   const fetchTrafficUpdateLogs = async (
     predictionType: string,
     limit: number = 10,
@@ -630,7 +524,7 @@ const DeploymentsPage: React.FC = () => {
 
       const data: TrafficMetricsResponse = await response.json();
 
-      // Transform backend data to ABTestLog format
+      // Transform backend data to ABTestLog format with description support
       const transformedLogs: ABTestLog[] = data.metrics.map((metric) => ({
         id: metric._id.$oid,
         timestamp: new Date(
@@ -639,7 +533,7 @@ const DeploymentsPage: React.FC = () => {
         action: "traffic_update",
         version: `v${metric.tags.predictor_version}`,
         trafficValue: metric.metric_value,
-        reason: "Traffic allocation updated", // You might want to add this field to your backend
+        reason: metric.description || "Traffic allocation updated", // Use description if available
         status: "success",
         predictionType: metric.tags.prediction_type,
       }));
@@ -649,6 +543,73 @@ const DeploymentsPage: React.FC = () => {
       console.error("Error fetching traffic update logs:", err);
       return [];
     }
+  };
+
+  // New function to fetch traffic deactivation logs
+  const fetchTrafficDeactivationLogs = async (
+    predictionType: string,
+    limit: number = 10,
+  ) => {
+    try {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        metric_name: "predictor_traffic_deactivation",
+        prediction_type: predictionType,
+      });
+
+      const response = await fetch(
+        buildApiUrl(ENDPOINTS.METRICS, Object.fromEntries(params)),
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          mode: "cors",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data: TrafficMetricsResponse = await response.json();
+
+      // Transform backend data to ABTestLog format
+      const transformedLogs: ABTestLog[] = data.metrics.map((metric) => ({
+        id: metric._id.$oid,
+        timestamp: new Date(
+          parseInt(metric.created_at.$date.$numberLong),
+        ).toISOString(),
+        action: "traffic_deactivation",
+        version: `v${metric.tags.predictor_version}`,
+        trafficValue: metric.metric_value,
+        reason: metric.description || "Traffic deactivated", // Use description if available
+        status: "success",
+        predictionType: metric.tags.prediction_type,
+      }));
+
+      return transformedLogs;
+    } catch (err) {
+      console.error("Error fetching traffic deactivation logs:", err);
+      return [];
+    }
+  };
+
+  // Combined function to fetch all logs
+  const fetchAllLogs = async (predictionType: string, limit: number = 10) => {
+    const [updateLogs, deactivationLogs] = await Promise.all([
+      fetchTrafficUpdateLogs(predictionType, limit),
+      fetchTrafficDeactivationLogs(predictionType, limit),
+    ]);
+
+    // Combine and sort logs by timestamp (newest first)
+    const allLogs = [...updateLogs, ...deactivationLogs].sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+
+    return allLogs.slice(0, limit); // Return only the requested number of logs
   };
 
   const fetchPredictionTypes = async () => {
@@ -717,7 +678,6 @@ const DeploymentsPage: React.FC = () => {
           deployedAt: new Date(
             parseInt(predictor.created_at.$date.$numberLong),
           ).toISOString(),
-          healthScore: Math.floor(Math.random() * 20) + 80, // Mock health score for now
         }),
       );
 
@@ -759,7 +719,7 @@ const DeploymentsPage: React.FC = () => {
     if (selectedAlgorithm) {
       const fetchLogs = async () => {
         setLogsLoading(true);
-        const logs = await fetchTrafficUpdateLogs(selectedAlgorithm);
+        const logs = await fetchAllLogs(selectedAlgorithm);
         setAbTestLogs(logs);
         setLogsLoading(false);
       };
@@ -771,6 +731,21 @@ const DeploymentsPage: React.FC = () => {
   const filteredDeployments = deployments.filter(
     (d) => d.algorithm === selectedAlgorithm,
   );
+
+  const getFilteredLogsByTab = () => {
+    switch (selectedLogTab) {
+      case 0: // All
+        return abTestLogs;
+      case 1: // Updates
+        return abTestLogs.filter((log) => log.action === "traffic_update");
+      case 2: // Deactivations
+        return abTestLogs.filter(
+          (log) => log.action === "traffic_deactivation",
+        );
+      default:
+        return abTestLogs;
+    }
+  };
 
   if (loading) {
     return (
@@ -844,12 +819,25 @@ const DeploymentsPage: React.FC = () => {
           ))}
         </Grid>
 
-        {/* A/B Test Activity Log */}
+        {/* Traffic Activity Log with Tabs */}
         <DashboardCard
-          title="Traffic Update History"
-          description="Recent traffic allocation changes"
+          title="Traffic Activity History"
+          description="Recent traffic allocation changes and deactivations"
         >
           <Box sx={{ p: 2 }}>
+            {/* Tab Navigation */}
+            <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+              <Tabs
+                value={selectedLogTab}
+                onChange={(_, newValue) => setSelectedLogTab(newValue)}
+                variant="fullWidth"
+              >
+                <Tab label="All Activity" />
+                <Tab label="Traffic Updates" />
+                <Tab label="Deactivations" />
+              </Tabs>
+            </Box>
+
             {logsLoading ? (
               <Box
                 display="flex"
@@ -859,9 +847,9 @@ const DeploymentsPage: React.FC = () => {
               >
                 <CircularProgress size={24} />
               </Box>
-            ) : abTestLogs.length > 0 ? (
+            ) : getFilteredLogsByTab().length > 0 ? (
               <Stack spacing={2}>
-                {abTestLogs.map((log) => (
+                {getFilteredLogsByTab().map((log) => (
                   <ABTestLogEntry key={log.id} log={log} />
                 ))}
               </Stack>
@@ -870,7 +858,13 @@ const DeploymentsPage: React.FC = () => {
                 color="text.secondary"
                 sx={{ textAlign: "center", py: 4 }}
               >
-                No traffic update history available for {selectedAlgorithm}
+                No{" "}
+                {selectedLogTab === 1
+                  ? "traffic update"
+                  : selectedLogTab === 2
+                    ? "deactivation"
+                    : ""}{" "}
+                history available for {selectedAlgorithm}
               </Typography>
             )}
 
@@ -884,10 +878,7 @@ const DeploymentsPage: React.FC = () => {
                   if (selectedAlgorithm) {
                     const fetchLogs = async () => {
                       setLogsLoading(true);
-                      const logs = await fetchTrafficUpdateLogs(
-                        selectedAlgorithm,
-                        20,
-                      ); // Fetch more
+                      const logs = await fetchAllLogs(selectedAlgorithm, 20); // Fetch more
                       setAbTestLogs(logs);
                       setLogsLoading(false);
                     };
