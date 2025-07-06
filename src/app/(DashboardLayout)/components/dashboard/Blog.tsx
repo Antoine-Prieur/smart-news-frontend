@@ -32,6 +32,19 @@ interface SentimentAnalysisResponse {
   prediction_value: string;
 }
 
+interface NewsClassificationResponse {
+  prediction_confidence?: number;
+  prediction_value: {
+    labels: string[];
+    scores: number[];
+  };
+}
+
+interface PredictionsResponse {
+  sentiment_analysis?: SentimentAnalysisResponse;
+  news_classification?: NewsClassificationResponse;
+}
+
 interface ArticleDocument {
   _id?: string;
   source: SourceDocument;
@@ -44,7 +57,8 @@ interface ArticleDocument {
   content?: string;
   created_at: string;
   updated_at: string;
-  sentiment_analysis?: SentimentAnalysisResponse;
+  sentiment_analysis?: SentimentAnalysisResponse; // Legacy support
+  predictions?: PredictionsResponse; // New structure
 }
 
 // Updated interface to match your new backend structure
@@ -99,7 +113,7 @@ const Blog = () => {
           color: "success" as const,
           label: `😊 Positive`,
           sx: {
-            backgroundColor: theme.palette.success.dark, // Use theme's dark green
+            backgroundColor: theme.palette.success.dark,
             color: "white",
             fontWeight: 600,
           },
@@ -129,6 +143,83 @@ const Blog = () => {
           },
         };
     }
+  };
+
+  // Helper function to get news category display props
+  const getCategoryDisplayProps = (category: string) => {
+    const categoryMap: Record<string, { emoji: string; color: string }> = {
+      "breaking news": { emoji: "🚨", color: theme.palette.error.main },
+      politics: { emoji: "🏛️", color: theme.palette.info.main },
+      economy: { emoji: "📈", color: theme.palette.success.main },
+      business: { emoji: "💼", color: theme.palette.primary.main },
+      technology: { emoji: "💻", color: theme.palette.secondary.main },
+      health: { emoji: "🏥", color: theme.palette.error.light },
+      science: { emoji: "🔬", color: theme.palette.info.light },
+      sports: { emoji: "⚽", color: theme.palette.warning.main },
+      entertainment: { emoji: "🎬", color: theme.palette.secondary.light },
+      "world news": { emoji: "🌍", color: theme.palette.info.dark },
+      "local news": { emoji: "🏘️", color: theme.palette.grey[600] },
+      opinion: { emoji: "💭", color: theme.palette.warning.dark },
+      lifestyle: { emoji: "🌟", color: theme.palette.secondary.main },
+      environment: { emoji: "🌱", color: theme.palette.success.dark },
+      military: { emoji: "⚔️", color: theme.palette.grey[700] },
+      crime: { emoji: "🚔", color: theme.palette.error.dark },
+      weather: { emoji: "🌤️", color: theme.palette.info.light },
+      education: { emoji: "📚", color: theme.palette.primary.light },
+    };
+
+    const categoryInfo = categoryMap[category.toLowerCase()] || {
+      emoji: "📰",
+      color: theme.palette.grey[500],
+    };
+
+    return {
+      label: `${categoryInfo.emoji} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
+      color: categoryInfo.color,
+    };
+  };
+
+  // Helper function to get top news categories with >70% confidence
+  const getTopNewsCategories = (
+    newsClassification?: NewsClassificationResponse,
+  ) => {
+    if (
+      !newsClassification?.prediction_value?.labels ||
+      !newsClassification?.prediction_value?.scores
+    ) {
+      return [];
+    }
+
+    const { labels, scores } = newsClassification.prediction_value;
+    const categories = labels
+      .map((label, index) => ({
+        label,
+        score: scores[index],
+      }))
+      .filter((category) => category.score >= 0.7) // Filter categories with >70% confidence
+      .sort((a, b) => b.score - a.score) // Sort by confidence descending
+      .slice(0, 3); // Take top 3 categories
+
+    return categories;
+  };
+
+  // Helper function to get sentiment analysis from either legacy or new structure
+  const getSentimentAnalysis = (
+    article: ArticleDocument,
+  ): SentimentAnalysisResponse | undefined => {
+    // Check new predictions structure first
+    if (article.predictions?.sentiment_analysis) {
+      return article.predictions.sentiment_analysis;
+    }
+    // Fall back to legacy structure
+    return article.sentiment_analysis;
+  };
+
+  // Helper function to get news classification from new structure
+  const getNewsClassification = (
+    article: ArticleDocument,
+  ): NewsClassificationResponse | undefined => {
+    return article.predictions?.news_classification;
   };
 
   const fetchArticles = async (page: number = 1, sentiment?: string) => {
@@ -167,7 +258,6 @@ const Blog = () => {
       setArticles(data.articles);
       setTotalCount(data.total_count);
       setTotalPages(data.total_pages);
-      // Use the page parameter instead of data.page to ensure consistency
       setCurrentPage(page);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch articles");
@@ -233,10 +323,12 @@ const Blog = () => {
 
       <Grid container spacing={3}>
         {articles.map((article, index) => {
-          const sentimentProps = article.sentiment_analysis
-            ? getSentimentDisplayProps(
-                article.sentiment_analysis.prediction_value,
-              )
+          const sentimentAnalysis = getSentimentAnalysis(article);
+          const newsClassification = getNewsClassification(article);
+          const topCategories = getTopNewsCategories(newsClassification);
+
+          const sentimentProps = sentimentAnalysis
+            ? getSentimentDisplayProps(sentimentAnalysis.prediction_value)
             : null;
 
           return (
@@ -301,73 +393,161 @@ const Blog = () => {
                   }}
                 >
                   <Box>
-                    {/* Sentiment Badge - moved to top of card content */}
-                    {sentimentProps && (
-                      <Box sx={{ mb: 2 }}>
-                        <Tooltip
-                          title={
-                            <Box>
-                              <Typography
-                                variant="body2"
-                                sx={{ fontWeight: 600, mb: 1 }}
-                              >
-                                Sentiment Classification
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 1 }}>
-                                • <strong>Positive:</strong> Articles with
-                                optimistic, encouraging, or favorable content
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 1 }}>
-                                • <strong>Negative:</strong> Articles with
-                                pessimistic, concerning, or unfavorable content
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 1 }}>
-                                • <strong>Neutral:</strong> Articles with
-                                balanced, factual, or objective content
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{ mt: 1, fontStyle: "italic" }}
-                              >
-                                This classification uses AI algorithms to
-                                predict sentiment based on words in the title
-                                and description. As this is a prediction, it may
-                                contain errors.
-                              </Typography>
-                            </Box>
-                          }
-                          arrow
-                          placement="top"
-                          slotProps={{
-                            tooltip: {
-                              sx: {
-                                backgroundColor: "primary.main",
-                                color: "white",
-                                fontSize: "0.875rem",
-                                maxWidth: 300,
-                                "& .MuiTooltip-arrow": {
-                                  color: "primary.main",
+                    {/* Classification and Sentiment Badges */}
+                    <Box sx={{ mb: 2 }}>
+                      {/* Sentiment Badge */}
+                      {sentimentProps && (
+                        <Box>
+                          <Tooltip
+                            title={
+                              <Box>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 600, mb: 1 }}
+                                >
+                                  Sentiment:{" "}
+                                  {sentimentAnalysis?.prediction_value}
+                                </Typography>
+                                {sentimentAnalysis?.prediction_confidence && (
+                                  <Typography variant="body2" sx={{ mb: 1 }}>
+                                    Confidence:{" "}
+                                    {(
+                                      sentimentAnalysis.prediction_confidence *
+                                      100
+                                    ).toFixed(1)}
+                                    %
+                                  </Typography>
+                                )}
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  • <strong>Positive:</strong> Articles with
+                                  optimistic, encouraging, or favorable content
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  • <strong>Negative:</strong> Articles with
+                                  pessimistic, concerning, or unfavorable
+                                  content
+                                </Typography>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  • <strong>Neutral:</strong> Articles with
+                                  balanced, factual, or objective content
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ mt: 1, fontStyle: "italic" }}
+                                >
+                                  This classification uses AI algorithms to
+                                  predict sentiment based on words in the title
+                                  and description. As this is a prediction, it
+                                  may contain errors.
+                                </Typography>
+                              </Box>
+                            }
+                            arrow
+                            placement="top"
+                            slotProps={{
+                              tooltip: {
+                                sx: {
+                                  backgroundColor: "primary.main",
+                                  color: "white",
+                                  fontSize: "0.875rem",
+                                  maxWidth: 300,
+                                  "& .MuiTooltip-arrow": {
+                                    color: "primary.main",
+                                  },
                                 },
                               },
-                            },
-                          }}
-                        >
-                          <Chip
-                            label={sentimentProps.label}
-                            color={sentimentProps.color}
-                            size="small"
-                            sx={{
-                              ...sentimentProps.sx,
-                              cursor: "help",
-                              transition: "all 0.2s ease-in-out",
-                              "&:hover": {
-                                transform: "scale(1.05)",
-                                boxShadow: "0 0 8px rgba(0,0,0,0.3)",
-                              },
                             }}
-                          />
-                        </Tooltip>
-                      </Box>
+                          >
+                            <Chip
+                              label={sentimentProps.label}
+                              color={sentimentProps.color}
+                              size="small"
+                              sx={{
+                                ...sentimentProps.sx,
+                                cursor: "help",
+                                transition: "all 0.2s ease-in-out",
+                                "&:hover": {
+                                  transform: "scale(1.05)",
+                                  boxShadow: "0 0 8px rgba(0,0,0,0.3)",
+                                },
+                              }}
+                            />
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* News Categories */}
+                    {topCategories.length > 0 && (
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ mb: 1, flexWrap: "wrap", gap: 0.5 }}
+                      >
+                        {topCategories.map((category, categoryIndex) => {
+                          const categoryProps = getCategoryDisplayProps(
+                            category.label,
+                          );
+                          return (
+                            <Tooltip
+                              key={categoryIndex}
+                              title={
+                                <Box>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ fontWeight: 600, mb: 1 }}
+                                  >
+                                    News Category: {category.label}
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ mb: 1 }}>
+                                    Confidence:{" "}
+                                    {(category.score * 100).toFixed(1)}%
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ fontStyle: "italic" }}
+                                  >
+                                    AI-predicted news category based on article
+                                    content. Only categories with ≥70%
+                                    confidence are shown.
+                                  </Typography>
+                                </Box>
+                              }
+                              arrow
+                              placement="top"
+                              slotProps={{
+                                tooltip: {
+                                  sx: {
+                                    backgroundColor: "primary.main",
+                                    color: "white",
+                                    fontSize: "0.875rem",
+                                    maxWidth: 300,
+                                    "& .MuiTooltip-arrow": {
+                                      color: "primary.main",
+                                    },
+                                  },
+                                },
+                              }}
+                            >
+                              <Chip
+                                label={categoryProps.label}
+                                size="small"
+                                sx={{
+                                  backgroundColor: categoryProps.color,
+                                  color: "white",
+                                  fontWeight: 500,
+                                  cursor: "help",
+                                  transition: "all 0.2s ease-in-out",
+                                  "&:hover": {
+                                    transform: "scale(1.05)",
+                                    boxShadow: "0 0 8px rgba(0,0,0,0.3)",
+                                  },
+                                }}
+                              />
+                            </Tooltip>
+                          );
+                        })}
+                      </Stack>
                     )}
 
                     {/* Title */}
@@ -376,50 +556,60 @@ const Blog = () => {
                       sx={{
                         mb: 1,
                         fontWeight: 600,
-                        lineHeight: 1.3,
+                        lineHeight: 1.4,
                         display: "-webkit-box",
                         WebkitLineClamp: 3,
                         WebkitBoxOrient: "vertical",
                         overflow: "hidden",
-                        minHeight: "4rem",
                       }}
                     >
-                      {article.title || "No title available"}
+                      {article.title}
                     </Typography>
+
+                    {/* Source and Author */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {article.source.name}
+                        {article.author && ` • ${article.author}`}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {article.published_at &&
+                          parseDate(article.published_at)?.toLocaleDateString()}
+                      </Typography>
+                    </Box>
 
                     {/* Description */}
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       sx={{
-                        mb: 2,
+                        lineHeight: 1.6,
                         display: "-webkit-box",
-                        WebkitLineClamp: 4,
+                        WebkitLineClamp: 3,
                         WebkitBoxOrient: "vertical",
                         overflow: "hidden",
-                        lineHeight: 1.5,
-                        minHeight: "6rem",
+                        mb: 2,
                       }}
                     >
                       {article.description || "No description available"}
                     </Typography>
                   </Box>
 
-                  {/* Article Meta */}
-                  <Stack direction="column" spacing={1}>
-                    {article.source?.name && (
+                  <Stack spacing={1}>
+                    {/* Content Preview */}
+                    {article.content && (
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ fontWeight: 500 }}
+                        sx={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          fontStyle: "italic",
+                        }}
                       >
-                        {article.source.name}
-                      </Typography>
-                    )}
-
-                    {article.published_at && (
-                      <Typography variant="caption" color="text.secondary">
-                        {parseDate(article.published_at)?.toLocaleDateString()}
+                        {article.content.replace(/\[.*?\]/g, "")}
                       </Typography>
                     )}
 
